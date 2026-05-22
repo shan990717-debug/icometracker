@@ -27,8 +27,8 @@ import FamilyClaimForm from '@/pages/FamilyClaimForm';
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
 
-  // 1. Loading State Screen
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  // 1. 🛡️ SAFE COLD BOOT: Only block the screen if there's no data AND it's strictly initializing
+  if ((isLoadingPublicSettings || isLoadingAuth) && !user) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>

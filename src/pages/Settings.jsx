@@ -6,7 +6,8 @@ import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTria
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
-import { LogoutButton } from "@/components/LogoutButton";
+// Add LogOut here 👇
+import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle, LogOut } from 'lucide-react';
 
 const COLORS = [
   'bg-green-50 text-green-600', 'bg-pink-50 text-pink-600', 'bg-purple-50 text-purple-600',
@@ -230,6 +231,29 @@ export default function Settings() {
           <p className="text-center text-muted-foreground text-sm py-8">{lang === 'zh' ? '暂无数据，请添加' : 'No items yet. Tap Add to create one.'}</p>
         )}
       </div>
+      {/* Log Out Account */}
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+        <div>
+          <p className="text-sm font-bold">{lang === 'zh' ? '🔒 退出登录' : '🔒 Log Out'}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {lang === 'zh'
+              ? '安全退出当前账户。您的所有本地设置已安全同步到云端。'
+              : 'Safely sign out of your account. Your configurations remain secure in the cloud.'}
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            if (confirm(lang === 'zh' ? '确定要退出登录吗？' : 'Are you sure you want to log out?')) {
+              base44.auth.logout();
+            }
+          }}
+          className="w-full h-10 rounded-xl font-semibold flex items-center justify-center gap-2 border-border hover:bg-secondary"
+        >
+          <LogOut className="w-4 h-4" />
+          {lang === 'zh' ? '退出当前账户' : 'Log Out of Account'}
+        </Button>
+      </div>
 
       {/* Reset Test Data */}
       <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-4 space-y-3">
@@ -382,20 +406,5 @@ export default function Settings() {
         </div>
       )}
     </div>
-    export default function SettingsPage() {
-  return (
-    <div className="max-w-md mx-auto p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Settings</h1>
-      
-      {/* Existing settings options go here (e.g., Theme toggles, Profile) */}
-      <div className="bg-card border rounded-lg p-4">
-        <p className="text-sm text-muted-foreground">Account Actions</p>
-        
-        {/* Drop the Logout Button component right here */}
-        <LogoutButton />
-      </div>
-    </div>
-  );
-}
   );
 }

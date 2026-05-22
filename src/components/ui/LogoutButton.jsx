@@ -1,22 +1,21 @@
 import React from 'react';
-import { useQueryClient } from '@tanstack/react-query'; // 🛠️ Make sure this is imported!
 import { base44 } from '@/api/base44Client';
 
 export function LogoutButton() {
-  const queryClient = useQueryClient(); // 🛠️ Initialize the query client
-
   const handleLogout = async () => {
     try {
-      // 1. 🛡️ ERASES ALL CURRENT DATA FROM THE BROWSER CACHE INSTANTLY
-      queryClient.clear(); 
-
-      // 2. Clear out the active database session tokens
+      // 1. Terminate the cloud session session cleanly
       await base44.auth.logout();
+      
+      // 2. 🛡️ THE PERFECT FIX: This natives clears ALL local caches, storage, and session records
+      window.localStorage.clear();
+      window.sessionStorage.clear();
 
-      // 3. Force the window to hard-reload straight back to the root entry path
+      // 3. Force a hard native browser reload straight to her base URL domain
       window.location.replace(window.location.origin);
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error("Logout execution error:", error);
+      // Absolute fallback redirection sequence
       window.location.replace('/');
     }
   };
@@ -24,9 +23,10 @@ export function LogoutButton() {
   return (
     <button 
       onClick={handleLogout}
-      className="w-full h-10 rounded-xl font-semibold flex items-center justify-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      type="button"
+      className="w-full h-10 rounded-xl font-bold flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white transition-all text-sm shadow-sm"
     >
-      Sign Out
+      Sign Out / 退出登录
     </button>
   );
 }

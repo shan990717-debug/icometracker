@@ -18,7 +18,7 @@ const COLORS = [
 
 export default function Settings() {
   const { lang, toggleLang } = useLanguage();
-  const queryClient = useQueryClient();]
+  const queryClient = useQueryClient();
   const navigate = useNavigate(); // Add this line here 👈
   const [activeTab, setActiveTab] = useState('income');
   const [editItem, setEditItem] = useState(null);

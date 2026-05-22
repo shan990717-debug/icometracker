@@ -1,85 +1,97 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  createUserWithEmailAndPassword 
-} from 'firebase/auth';
+import React, { useEffect } from 'react';
+import { Toaster } from "@/components/ui/toaster"
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClientInstance } from '@/lib/query-client'
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import PageNotFound from './lib/PageNotFound';
+import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { LanguageProvider } from '@/lib/i18n';
 
-// Firebase Configuration using Vite environment variables
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
+import AppLayout from '@/components/layout/AppLayout';
+import Dashboard from '@/pages/Dashboard.jsx';
+import Today from '@/pages/Today.jsx';
+import Calendar from '@/pages/Calendar';
+import Settlement from '@/pages/Settlement';
+import Claims from '@/pages/Claims';
+import Goals from '@/pages/Goals';
+import Review from '@/pages/Review';
+import Settings from '@/pages/Settings';
+import HouseholdBills from '@/pages/HouseholdBills';
+import BillForm from '@/pages/BillForm';
+import GoalForm from '@/pages/GoalForm';
+import PaymentEditForm from '@/pages/PaymentEditForm';
+import FamilyClaimForm from '@/pages/FamilyClaimForm';
 
-// Initialize Firebase safely
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
+const AuthenticatedApp = () => {
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-const AuthContext = createContext(null);
+  if (isLoadingPublicSettings || isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
-  const [authError, setAuthError] = useState(null);
-
-  // Simple mock navigation since React Router manages the main routes
-  const navigateToLogin = () => {
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsLoadingAuth(false);
-      
-      // Turn off settings loading smoothly alongside auth verification
-      setIsLoadingPublicSettings(false); 
-    }, (error) => {
-      console.error("Auth state observation error:", error);
-      setAuthError({ type: 'auth_failed', message: error.message });
-      setIsLoadingAuth(false);
-      setIsLoadingPublicSettings(false);
-    });
-    
-    return unsubscribe;
-  }, []);
-
-  const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
-  const logout = () => signOut(auth);
-  const signup = (email, password) => createUserWithEmailAndPassword(auth, email, password);
-
-  const value = {
-    user,
-    isLoadingAuth,
-    isLoadingPublicSettings,
-    authError,
-    navigateToLogin,
-    login,
-    logout,
-    signup
-  };
+  if (authError) {
+    if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
+    if (authError.type === 'auth_required') { navigateToLogin(); return null; }
+  }
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/today" element={<Today />} />
+        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/settlement" element={<Settlement />} />
+        <Route path="/claims" element={<Claims />} />
+        <Route path="/goals" element={<Goals />} />
+        <Route path="/review" element={<Review />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/bills" element={<HouseholdBills />} />
+        <Route path="/bills/new" element={<BillForm />} />
+        <Route path="/bills/edit" element={<BillForm />} />
+        <Route path="/goals/new" element={<GoalForm />} />
+        <Route path="/goals/edit" element={<GoalForm />} />
+        <Route path="/bills/payment/edit" element={<PaymentEditForm />} />
+        <Route path="/bills/payment/new" element={<PaymentEditForm />} />
+        <Route path="/family-claim/new" element={<FamilyClaimForm />} />
+        <Route path="/family-claim/edit" element={<FamilyClaimForm />} />
+      </Route>
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
+  );
+};
+
+function DarkModeSync() {
+  useEffect(() => {
+    const apply = (dark) => document.documentElement.classList.toggle('dark', dark);
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    apply(mq.matches);
+    const handler = (e) => apply(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return null;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <QueryClientProvider client={queryClientInstance}>
+        <LanguageProvider>
+          <DarkModeSync />
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </LanguageProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+// Ensure this default export is present at the very end
+export default App;

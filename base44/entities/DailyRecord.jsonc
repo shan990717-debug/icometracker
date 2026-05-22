@@ -1,0 +1,123 @@
+{
+  "name": "DailyRecord",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "income_grab": {
+      "type": "number",
+      "default": 0
+    },
+    "income_tips": {
+      "type": "number",
+      "default": 0
+    },
+    "income_incentive": {
+      "type": "number",
+      "default": 0
+    },
+    "income_turbo5": {
+      "type": "number",
+      "default": 0
+    },
+    "income_turbo_cashback": {
+      "type": "number",
+      "default": 0
+    },
+    "income_cdian": {
+      "type": "number",
+      "default": 0
+    },
+    "income_indrive": {
+      "type": "number",
+      "default": 0
+    },
+    "income_aa": {
+      "type": "number",
+      "default": 0
+    },
+    "income_bolt": {
+      "type": "number",
+      "default": 0
+    },
+    "income_3party": {
+      "type": "number",
+      "default": 0
+    },
+    "income_late_cancel": {
+      "type": "number",
+      "default": 0,
+      "description": "Late cancellation fee"
+    },
+    "income_trip_adj": {
+      "type": "number",
+      "default": 0,
+      "description": "Trip adjustment income"
+    },
+    "income_others": {
+      "type": "number",
+      "default": 0,
+      "description": "Other miscellaneous income"
+    },
+    "expense_petrol": {
+      "type": "number",
+      "default": 0
+    },
+    "expense_shidan": {
+      "type": "number",
+      "default": 0,
+      "description": "\u5c04\u5355 commission cost"
+    },
+    "expense_shidan_order_amt": {
+      "type": "number",
+      "default": 0
+    },
+    "expense_shidan_rate": {
+      "type": "number",
+      "default": 25
+    },
+    "expense_toll": {
+      "type": "number",
+      "default": 0
+    },
+    "expense_parking": {
+      "type": "number",
+      "default": 0
+    },
+    "expense_pa_insurance": {
+      "type": "number",
+      "default": 0,
+      "description": "PA insurance daily share (monthly RM23.44 / working days)"
+    },
+    "expense_car": {
+      "type": "number",
+      "default": 0,
+      "description": "Car expenses e.g. car wash, minor repairs"
+    },
+    "total_income": {
+      "type": "number",
+      "default": 0
+    },
+    "total_expense": {
+      "type": "number",
+      "default": 0
+    },
+    "actual_income": {
+      "type": "number",
+      "default": 0
+    },
+    "stored_bank": {
+      "type": "number",
+      "default": 0
+    },
+    "stored_cash": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "date"
+  ]
+}

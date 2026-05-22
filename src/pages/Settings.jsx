@@ -27,23 +27,6 @@ export default function Settings() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleDeleteAccount = async () => {
-    setDeletingAccount(true);
-    // Delete all user data
-    await Promise.all([
-      base44.entities.DailyRecord.list().then(r => Promise.all(r.map(i => base44.entities.DailyRecord.delete(i.id)))),
-      base44.entities.MonthlySettlement.list().then(r => Promise.all(r.map(i => base44.entities.MonthlySettlement.delete(i.id)))),
-      base44.entities.BillPayment.list().then(r => Promise.all(r.map(i => base44.entities.BillPayment.delete(i.id)))),
-      base44.entities.Claim.list().then(r => Promise.all(r.map(i => base44.entities.Claim.delete(i.id)))),
-      base44.entities.SharedFamilyFund.list().then(r => Promise.all(r.map(i => base44.entities.SharedFamilyFund.delete(i.id)))),
-      base44.entities.Goal.list().then(r => Promise.all(r.map(i => base44.entities.Goal.delete(i.id)))),
-      base44.entities.HouseholdBill.list().then(r => Promise.all(r.map(i => base44.entities.HouseholdBill.delete(i.id)))),
-      base44.entities.IncomeSource.list().then(r => Promise.all(r.map(i => base44.entities.IncomeSource.delete(i.id)))),
-      base44.entities.DeductionCategory.list().then(r => Promise.all(r.map(i => base44.entities.DeductionCategory.delete(i.id)))),
-    ]);
-    base44.auth.logout();
-  };
-
   const handleResetTestData = async () => {
     if (!confirm(lang === 'zh' ? '确定清除所有测试数据？此操作不可撤销。\n\n将清除：日常记录、账单付款、报销记录、See May记录、储蓄目标、月度结算。\n\n保留：账单模板、类别设置、默认金额。' : 'Clear all test data? This cannot be undone.\n\nWill delete: daily records, bill payments, claims, See May records, goals, settlements.\n\nKeeps: bill templates, categories, default amounts.')) return;
     setResetting(true);
@@ -236,15 +219,20 @@ export default function Settings() {
           <p className="text-sm font-bold">{lang === 'zh' ? '🔒 退出登录' : '🔒 Log Out'}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {lang === 'zh'
-              ? '安全退出当前账户。您的所有本地设置已安全同步到云端。'
-              : 'Safely sign out of your account. Your configurations remain secure in the cloud.'}
+              ? '安全退出当前账户。'
+              : 'Safely sign out of your account.'}
           </p>
         </div>
         <Button 
           variant="outline" 
-          onClick={() => {
-            if (confirm(lang === 'zh' ? '确定要退出登录吗？' : 'Are you sure you want to log out?')) {
-              base44.auth.logout();
+          onClick={async () => {
+            try {
+              // 1. Invalidate session via Base44 SDK instantly
+              await base44.auth.logout();
+            } catch (error) {
+              console.error("Logout error:", error);
+              // Fallback force redirect if SDK session is already stale
+              window.location.href = '/login';
             }
           }}
           className="w-full h-10 rounded-xl font-semibold flex items-center justify-center gap-2 border-border hover:bg-secondary"

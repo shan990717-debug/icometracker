@@ -1,21 +1,17 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext'; // 1. Import your auth context
 
 export function LogoutButton() {
+  const { logout } = useAuth(); // 2. Extract your official logout function
+
   const handleLogout = async () => {
     try {
-      // 1. Terminate the cloud database connection session
-      await base44.auth.logout();
-    } catch (error) {
-      console.error("Logout authentication processing error:", error);
-    } finally {
-      // 2. 🛡️ Clean out lingering frontend layout cache metrics
       window.localStorage.clear();
       window.sessionStorage.clear();
-
-      // 3. Force the application back to a 100% fresh slate at the root entry path
-      window.location.replace(window.location.origin);
-    }
+      await logout(); // 3. Use Firebase logout instead of base44
+    } catch (error) {
+      console.error("Logout authentication processing error:", error);
+    } 
   };
 
   return (

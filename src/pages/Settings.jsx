@@ -86,19 +86,35 @@ export default function Settings() {
   };
 
   const handleResetTestData = async () => {
-    if (!confirm(lang === 'zh' ? '确定清除所有测试数据？此操作不可撤销。\n\n将清除：日常记录、账单付款、报销记录、See May记录、储蓄目标、月度结算。\n\n保留：账单模板、类别设置、默认金额。' : 'Clear all test data? This cannot be undone.\n\nWill delete: daily records, bill payments, claims, See May records, goals, settlements.\n\nKeeps: bill templates, categories, default amounts.')) return;
+    if (!confirm('NUCLEAR PURGE: This will wipe EVERYTHING, including all stuck duplicate categories and templates.')) return;
     setResetting(true);
-    await Promise.all([
-      base44.entities.DailyRecord.list().then(r => Promise.all(r.map(i => base44.entities.DailyRecord.delete(i.id)))),
-      base44.entities.MonthlySettlement.list().then(r => Promise.all(r.map(i => base44.entities.MonthlySettlement.delete(i.id)))),
-      base44.entities.BillPayment.list().then(r => Promise.all(r.map(i => base44.entities.BillPayment.delete(i.id)))),
-      base44.entities.Claim.list().then(r => Promise.all(r.map(i => base44.entities.Claim.delete(i.id)))),
-      base44.entities.SharedFamilyFund.list().then(r => Promise.all(r.map(i => base44.entities.SharedFamilyFund.delete(i.id)))),
-      base44.entities.Goal.list().then(r => Promise.all(r.map(i => base44.entities.Goal.delete(i.id)))),
-    ]);
-    queryClient.invalidateQueries();
-    setResetting(false);
-    toast.success(lang === 'zh' ? '✅ 测试数据已清除' : '✅ Test data cleared');
+    try {
+      await Promise.all([
+        // 1. Wipe standard records
+        base44.entities.DailyRecord.list().then(r => Promise.all(r.map(i => base44.entities.DailyRecord.delete(i.id)))),
+        base44.entities.MonthlySettlement.list().then(r => Promise.all(r.map(i => base44.entities.MonthlySettlement.delete(i.id)))),
+        base44.entities.BillPayment.list().then(r => Promise.all(r.map(i => base44.entities.BillPayment.delete(i.id)))),
+        base44.entities.Claim.list().then(r => Promise.all(r.map(i => base44.entities.Claim.delete(i.id)))),
+        base44.entities.Goal.list().then(r => Promise.all(r.map(i => base44.entities.Goal.delete(i.id)))),
+        
+        // 2. 🚨 WIPE THE CORRUPTED DUPLICATE CATEGORIES
+        base44.entities.IncomeSource.list().then(r => Promise.all(r.map(i => base44.entities.IncomeSource.delete(i.id)))),
+        base44.entities.DeductionCategory.list().then(r => Promise.all(r.map(i => base44.entities.DeductionCategory.delete(i.id)))),
+        base44.entities.HouseholdBill.list().then(r => Promise.all(r.map(i => base44.entities.HouseholdBill.delete(i.id)))),
+      ]);
+      
+      queryClient.invalidateQueries();
+      toast.success('💥 Database completely purged!');
+      
+      // Force a hard reload to fetch a completely blank slate
+      setTimeout(() => window.location.reload(), 1000);
+      
+    } catch (err) {
+      console.error(err);
+      toast.error('Purge failed.');
+    } finally {
+      setResetting(false);
+    }
   };
   
   const TABS = [

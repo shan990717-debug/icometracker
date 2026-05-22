@@ -8,6 +8,7 @@ import { calcMonthlyTotals, calcHealthStatus, monthStr } from '@/lib/finance';
 import { INCOME_THRESHOLDS, HEALTH_STATUS } from '@/lib/constants';
 import { ChevronRight, AlertCircle, TrendingUp, CalendarDays, Zap, Receipt } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/lib/AuthContext';
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
 const TODAY_DAY = new Date().getDate();
@@ -33,19 +34,23 @@ function getGreeting(lang) {
   return 'Good evening!';
 }
 
+// 2. Inside the Dashboard component, grab the user context state:
 export default function Dashboard() {
   const { lang } = useLanguage();
+  const { user } = useAuth(); // 🛠️ Get the actual authenticated user object
   const [selectedTarget, setSelectedTarget] = useState('minimum_safe');
 
-  // 1. Core normal queries (No enabled gates)
+  // 3. Update the queries to stay locked until the user object is solid!
   const { data: records = [], isLoading } = useQuery({
-    queryKey: ['dailyRecords'],
+    queryKey: ['dailyRecords', user?.uid], // Unique key per user session
     queryFn: () => base44.entities.DailyRecord.list('-date', 60),
+    enabled: !!user, // 🛡️ ONLY fetch when your custom AuthContext is fully ready!
   });
 
   const { data: claims = [] } = useQuery({
-    queryKey: ['claims'],
+    queryKey: ['claims', user?.uid],
     queryFn: () => base44.entities.Claim.list('-date_paid', 50),
+    enabled: !!user, // 🛡️ Freeze query during initialization
   });
 
   const todayRecord = records.find(r => r.date === TODAY);

@@ -42,7 +42,8 @@ const DEFAULT_DEDUCTION_CATEGORIES = [
 
 let seedPromise = null;
 
-export async function seedDefaultCategories() {
+// 🛠️ Change the signature to accept the active user object passed from the app
+export async function seedDefaultCategories(activeUser) {
   if (seedPromise) return seedPromise;
 
   seedPromise = (async () => {
@@ -54,28 +55,22 @@ export async function seedDefaultCategories() {
       ]);
 
       if (existingIncome.length > 0 || existingDeductions.length > 0 || existingBills.length > 0) {
-        console.log('Database already contains categories. Skipping seed.');
         return;
       }
 
-      // 1. Get the current logged-in user context object
-      const currentUser = base44.auth?.user;
-      
-      // 2. 🛡️ HARDCODED GUARD: Force an exact match on your email address
-      const isTargetAccount = currentUser?.email?.toLowerCase() === 'ally9329@gmail.com';
+      // 🛡️ HARDCODED GUARD: Check the passed email parameter directly!
+      const isTargetAccount = activeUser?.email?.toLowerCase() === 'ally9329@gmail.com';
 
-      // 3. Create core income and deduction tables for EVERYONE
       await Promise.all([
         base44.entities.IncomeSource.bulkCreate(DEFAULT_INCOME_SOURCES),
         base44.entities.DeductionCategory.bulkCreate(DEFAULT_DEDUCTION_CATEGORIES),
       ]);
 
-      // 4. Only seed household bills if the account belongs to ally9329@gmail.com
       if (isTargetAccount) {
         await base44.entities.HouseholdBill.bulkCreate(DEFAULT_HOUSEHOLD_BILLS);
-        console.log('✅ Match found for ally9329@gmail.com. Seeding default household bills.');
+        console.log('✅ Match found for ally9329@gmail.com. Seeding personal household bills.');
       } else {
-        console.log('👤 Alternative user detected. Skipping household bill template injection.');
+        console.log('👤 Generic user profile. Skipping personal bills template injection.');
       }
 
     } catch (e) {

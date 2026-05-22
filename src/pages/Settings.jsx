@@ -228,15 +228,15 @@ export default function Settings() {
           variant="outline" 
           onClick={async () => {
             try {
-              // 1. Terminate the session
+              // 1. Terminate the session cleanly
               await base44.auth.logout();
               
-              // 2. Redirect back to root where the app decides to show the login layout
-              navigate('/', { replace: true });
+              // 2. Force the browser to reload specifically at the login route path
+              window.location.href = '/login';
             } catch (error) {
               console.error("Logout routing error:", error);
-              // Fallback refresh to clear memory states completely
-              window.location.replace(window.location.origin);
+              // Fallback if anything goes wrong
+              window.location.href = '/login';
             }
           }}
           className="w-full h-10 rounded-xl font-semibold flex items-center justify-center gap-2 border-border hover:bg-secondary"

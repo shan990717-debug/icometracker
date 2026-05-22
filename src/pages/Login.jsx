@@ -46,7 +46,10 @@ export default function Login() {
         await login(email, password);
         toast.success(lang === 'zh' ? '登录成功' : 'Logged in successfully');
       }
-      window.location.href = '/'; 
+      
+      // 🛡️ THE FIX: Replaces the frame instantly with a clean window history track
+      window.location.replace('/'); 
+      
     } catch (error) {
       console.error(error);
       if (error.code === 'auth/email-already-in-use') {

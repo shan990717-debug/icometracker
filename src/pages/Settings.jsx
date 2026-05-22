@@ -41,6 +41,23 @@ export default function Settings() {
     }
   }, [user, queryClient]);
 
+  // 1. Fetch raw data
+  const { data: rawIncomeSources = [] } = useQuery({
+    queryKey: ['incomeSources', user?.uid],
+    queryFn: () => base44.entities.IncomeSource.list('sort_order', 50),
+    enabled: !!user,
+  });
+
+  const { data: rawDeductionCategories = [] } = useQuery({
+    queryKey: ['deductionCategories', user?.uid],
+    queryFn: () => base44.entities.DeductionCategory.list('sort_order', 50),
+    enabled: !!user,
+  });
+
+  // 2. 🛡️ FILTER DUPLICATES: Force unique entries based on ID
+  const incomeSources = Array.from(new Map(rawIncomeSources.map(item => [item.id, item])).values());
+  const deductionCategories = Array.from(new Map(rawDeductionCategories.map(item => [item.id, item])).values());
+  
   // 2. 🟢 CLEAN DATA READS
   const { data: incomeSources = [] } = useQuery({
     queryKey: ['incomeSources', user?.uid],

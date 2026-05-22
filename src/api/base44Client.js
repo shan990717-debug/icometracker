@@ -17,11 +17,12 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // Initialize Firestore Database
 export const db = getFirestore(app);
 
-// A generic mock model helper to prevent crashes when reading or seeding data
+// A generic mock model helper that mirrors all Base44 data fetching methods
 const createMockModel = () => ({
   list: async () => [],
   get: async () => null,
   create: async (data) => data,
+  bulkCreate: async (data) => data,
   update: async (id, data) => data,
   delete: async () => true,
   query: () => ({
@@ -31,24 +32,26 @@ const createMockModel = () => ({
   })
 });
 
-// 1. Explicit Named Exports for the models
-export const IncomeSource = createMockModel();
-export const DailyRecord = createMockModel();
+// Create the exact entities structure the app expects
+export const entities = {
+  IncomeSource: createMockModel(),
+  DailyRecord: createMockModel(),
+  DeductionCategory: createMockModel(),
+  HouseholdBill: createMockModel(),
+};
 
-// 2. Explicit Named Export for the 'base44' object containing the models
+// Explicit Named Export for the 'base44' object
 export const base44 = {
   db: db,
-  IncomeSource: IncomeSource,
-  DailyRecord: DailyRecord,
+  entities: entities,
   query: async () => ({ data: [], error: null }),
 };
 
-// 3. Root Default Export combining everything
+// Root Default Export matching all possible structural styles
 const base44Client = {
   db: db,
   base44: base44,
-  IncomeSource: IncomeSource,
-  DailyRecord: DailyRecord,
+  entities: entities,
   ...base44
 };
 

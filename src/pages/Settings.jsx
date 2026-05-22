@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
 
-// 1. Import her pre-built logout button component 👇
-import { LogoutButton } from '@/components/ui/LogoutButton.jsx';
-
-// 2. Kept clean without duplicate icon strings
+import { LogoutButton } from '@/components/ui/LogoutButton';
 import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+
 const COLORS = [
   'bg-green-50 text-green-600', 'bg-pink-50 text-pink-600', 'bg-purple-50 text-purple-600',
   'bg-orange-50 text-orange-500', 'bg-amber-50 text-amber-600', 'bg-red-50 text-red-500',
@@ -21,7 +19,7 @@ const COLORS = [
 export default function Settings() {
   const { lang, toggleLang } = useLanguage();
   const queryClient = useQueryClient();
-  const navigate = useNavigate(); // Add this line here 👈
+  
   const [activeTab, setActiveTab] = useState('income');
   const [editItem, setEditItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -219,7 +217,7 @@ export default function Settings() {
       </div>
       
       {/* Log Out Account */}
-      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+      <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
         <div>
           <p className="text-sm font-bold">{lang === 'zh' ? '🔒 退出登录' : '🔒 Log Out'}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -227,7 +225,7 @@ export default function Settings() {
           </p>
         </div>
         
-        {/* Render her official pre-built component here directly 👇 */}
+        {/* Her official pre-made component handles everything perfectly inside here 👇 */}
         <LogoutButton />
       </div>
 

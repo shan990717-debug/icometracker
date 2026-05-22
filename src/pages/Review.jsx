@@ -13,17 +13,32 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import FinancialThreshold from '@/components/review/FinancialThreshold';
 import DreamCapacity from '@/components/review/DreamCapacity';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Review() {
   const { lang } = useLanguage();
-  const queryClient = useQueryClient(); // 🛠️ Make sure this line exists!
+  const queryClient = useQueryClient();
+  const { user } = useAuth(); // 🛠️ B. Extract the confirmed user session context profile
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const mStr = monthStr(currentMonth);
   const generatingRef = React.useRef(false);
   
-  const { data: allRecords = [] } = useQuery({ queryKey: ['dailyRecords'], queryFn: () => base44.entities.DailyRecord.list('-date', 400) });
-  const { data: settlements = [] } = useQuery({ queryKey: ['settlements'], queryFn: () => base44.entities.MonthlySettlement.list('-month', 24) });
-  const { data: claims = [] } = useQuery({ queryKey: ['claims'], queryFn: () => base44.entities.Claim.list('-date_paid', 100) });
+  // C. Freeze queries until your custom context layer finishes loading:
+  const { data: allRecords = [] } = useQuery({ 
+    queryKey: ['dailyRecords', user?.uid], 
+    queryFn: () => base44.entities.DailyRecord.list('-date', 400),
+    enabled: !!user 
+  });
+  const { data: settlements = [] } = useQuery({ 
+    queryKey: ['settlements', user?.uid], 
+    queryFn: () => base44.entities.MonthlySettlement.list('-month', 24),
+    enabled: !!user 
+  });
+  const { data: claims = [] } = useQuery({ 
+    queryKey: ['claims', user?.uid], 
+    queryFn: () => base44.entities.Claim.list('-date_paid', 100),
+    enabled: !!user 
+  });
 
   const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
   const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
@@ -86,16 +101,17 @@ export default function Review() {
       generatingRef.current = false; // Always clear the promise lock gate
     }
   };
+
   // ── HOOK GUARD WRAPPER TO PREVENT TRIPLICATES ON LOGIN ──
   React.useEffect(() => {
-    // If it's already running, immediately kill duplicate trigger renders 2 and 3
     if (generatingRef.current) return;
 
-    if (monthRecords.length > 0 && !settlement && settlements.length > 0) {
-      generatingRef.current = true; // Lock the execution gate instantly
+    // 🛡️ Ensure we ONLY attempt to auto-generate if a valid, authenticated user exists
+    if (user && monthRecords.length > 0 && !settlement && settlements.length > 0) {
+      generatingRef.current = true;
       handleAutoGeneration();
     }
-  }, [monthRecords.length, settlement, settlements.length]);
+  }, [monthRecords.length, settlement, settlements.length, user]);
   
   return (
     <div className="px-4 pt-14 pb-6 space-y-4 max-w-lg mx-auto">

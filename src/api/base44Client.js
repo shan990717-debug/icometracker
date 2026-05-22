@@ -25,12 +25,16 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
+const getCurrentUserId = () => auth.currentUser ? auth.currentUser.uid : null;
+
 const createFirebaseModel = (collectionName) => ({
   filter: async (conditions = {}) => {
+    const uid = getCurrentUserId();
+    if (!uid) return [];
     try {
-      let q = collection(db, collectionName);
+      let q = query(collection(db, collectionName), where('userId', '==', uid));
       Object.keys(conditions).forEach((key) => {
-        if (conditions[key] !== undefined) {
+        if (conditions[key] !== undefined && key !== 'userId') {
           q = query(q, where(key, '==', conditions[key]));
         }
       });
@@ -43,8 +47,12 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   list: async () => {
+    const uid = getCurrentUserId();
+    if (!uid) return [];
     try {
-      const snapshot = await getDocs(collection(db, collectionName));
+      // Force user segregation on every single list request
+      const q = query(collection(db, collectionName), where('userId', '==', uid));
+      const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.warn(`List fallback for ${collectionName}:`, error.message);
@@ -53,9 +61,11 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   get: async (id) => {
-    if (!id) return null;
+    const uid = getCurrentUserId();
+    if (!id || !uid) return null;
     try {
-      const snapshot = await getDocs(collection(db, collectionName));
+      const q = query(collection(db, collectionName), where('userId', '==', uid));
+      const snapshot = await getDocs(q);
       const found = snapshot.docs.find(d => d.id === id);
       return found ? { id: found.id, ...found.data() } : null;
     } catch (error) {
@@ -64,9 +74,12 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   create: async (data) => {
+    const uid = getCurrentUserId();
+    if (!uid) throw new Error("User must be logged in to save data");
     try {
-      const docRef = await addDoc(collection(db, collectionName), data);
-      return { id: docRef.id, ...data };
+      const dataWithUser = { ...data, userId: uid };
+      const docRef = await addDoc(collection(db, collectionName), dataWithUser);
+      return { id: docRef.id, ...dataWithUser };
     } catch (error) {
       console.error(`Error creating in ${collectionName}:`, error);
       throw error;
@@ -74,11 +87,14 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   bulkCreate: async (dataArray) => {
+    const uid = getCurrentUserId();
+    if (!uid) return dataArray;
     try {
       const results = [];
       for (const item of dataArray) {
-        const docRef = await addDoc(collection(db, collectionName), item);
-        results.push({ id: docRef.id, ...item });
+        const dataWithUser = { ...item, userId: uid };
+        const docRef = await addDoc(collection(db, collectionName), dataWithUser);
+        results.push({ id: docRef.id, ...dataWithUser });
       }
       return results;
     } catch (error) {
@@ -87,10 +103,12 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   update: async (id, data) => {
+    const uid = getCurrentUserId();
     try {
+      const dataWithUser = { ...data, userId: uid };
       const docRef = doc(db, collectionName, id);
-      await updateDoc(docRef, data);
-      return { id, ...data };
+      await updateDoc(docRef, dataWithUser);
+      return { id, ...dataWithUser };
     } catch (error) {
       console.error(`Error updating in ${collectionName}:`, error);
       throw error;

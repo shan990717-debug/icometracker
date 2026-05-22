@@ -17,13 +17,28 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // Initialize Firestore Database
 export const db = getFirestore(app);
 
-// Create a safe mock object to satisfy components still trying to call old base44 methods
+// A generic mock model helper to prevent crashes when reading or seeding data
+const createMockModel = () => ({
+  list: async () => [],
+  get: async () => null,
+  create: async (data) => data,
+  update: async (id, data) => data,
+  delete: async () => true,
+  // Base44 often uses a .query() chain, so we mock that too
+  query: () => ({
+    where: () => createMockModel(),
+    order: () => createMockModel(),
+    exec: async () => []
+  })
+});
+
+// Create a safe mock object containing the models the app is looking for
 export const base44 = {
   db: db,
-  // We mock a standard query method just in case PageNotFound or other pages attempt to call it
+  IncomeSource: createMockModel(),
+  DailyRecord: createMockModel(),
+  // Adding a generic fallback just in case there are other tables like 'User' or 'Settings'
   query: async () => ({ data: [], error: null }),
-  get: async () => ({ data: null, error: null }),
-  post: async () => ({ data: null, error: null })
 };
 
 // Default export to keep both styles of imports happy

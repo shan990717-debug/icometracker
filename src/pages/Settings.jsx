@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTria
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
+import { useNavigate } from 'react-router-dom';
 
 const COLORS = [
   'bg-green-50 text-green-600', 'bg-pink-50 text-pink-600', 'bg-purple-50 text-purple-600',
@@ -17,7 +18,8 @@ const COLORS = [
 
 export default function Settings() {
   const { lang, toggleLang } = useLanguage();
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient();]
+  const navigate = useNavigate(); // Add this line here 👈
   const [activeTab, setActiveTab] = useState('income');
   const [editItem, setEditItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -213,25 +215,27 @@ export default function Settings() {
           <p className="text-center text-muted-foreground text-sm py-8">{lang === 'zh' ? '暂无数据，请添加' : 'No items yet. Tap Add to create one.'}</p>
         )}
       </div>
+      
       {/* Log Out Account */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
         <div>
           <p className="text-sm font-bold">{lang === 'zh' ? '🔒 退出登录' : '🔒 Log Out'}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {lang === 'zh'
-              ? '安全退出当前账户。'
-              : 'Safely sign out of your account.'}
+            {lang === 'zh' ? '安全退出当前账户。' : 'Safely sign out of your account.'}
           </p>
         </div>
         <Button 
           variant="outline" 
           onClick={async () => {
             try {
-              // 1. Invalidate session via Base44 SDK instantly
+              // 1. Core clean session signout
               await base44.auth.logout();
+              
+              // 2. Instantly redirect to login screen & wipe router history stack
+              navigate('/login', { replace: true });
             } catch (error) {
-              console.error("Logout error:", error);
-              // Fallback force redirect if SDK session is already stale
+              console.error("Logout routing error:", error);
+              // Fallback redirect if network or system states are out-of-sync
               window.location.href = '/login';
             }
           }}

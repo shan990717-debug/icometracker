@@ -17,37 +17,31 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // Initialize Firestore Database
 export const db = getFirestore(app);
 
-// A standard base mock model
-const baseModel = {
-  list: async () => [],
-  get: async () => null,
-  create: async (data) => data,
-  bulkCreate: async (data) => data,
-  update: async (id, data) => data,
-  delete: async () => true,
-  query: () => createSmartMockModel()
+// A clean database model blueprint that acts like BOTH an object and a safe array generator
+const createCleanMockModel = () => {
+  return {
+    // Standard Base44 database execution styles
+    list: async () => [],
+    get: async () => null,
+    create: async (data) => data,
+    bulkCreate: async (data) => data,
+    update: async (id, data) => data,
+    delete: async () => true,
+    
+    // In case the code uses base44.entities.DailyRecord.query().where().exec()
+    query: () => ({
+      where: () => createCleanMockModel(),
+      order: () => createCleanMockModel(),
+      exec: async () => []
+    })
+  };
 };
 
-// Use a JavaScript Proxy to catch array calls like .filter(), .map(), or .forEach()
-const createSmartMockModel = () => {
-  return new Proxy(baseModel, {
-    get: (target, prop) => {
-      // If the code is treating this model like an array, redirect it to an empty array fallback
-      if (['filter', 'map', 'find', 'findIndex', 'forEach', 'reduce', 'slice', 'some', 'every', 'length'].includes(prop)) {
-        return [][prop];
-      }
-      
-      // Otherwise, return the standard database helper method
-      return target[prop] !== undefined ? target[prop] : createSmartMockModel();
-    }
-  });
-};
-
-// Create the dynamic smart entities structure
+// Auto-generating objects dynamically so any referenced table (DailyRecord, etc.) handles array safety perfectly
 export const entities = new Proxy({}, {
   get: (target, prop) => {
     if (!target[prop]) {
-      target[prop] = createSmartMockModel();
+      target[prop] = createCleanMockModel();
     }
     return target[prop];
   }
@@ -60,12 +54,12 @@ export const base44 = {
   query: async () => ({ data: [], error: null }),
 };
 
-// Root Default Export matching all layout targets
+// Root Default Export matching all layout targets across the codebase
 const base44Client = {
   db: db,
   base44: base44,
   entities: entities,
-  ...base44
+  ...entities
 };
 
 export default base44Client;

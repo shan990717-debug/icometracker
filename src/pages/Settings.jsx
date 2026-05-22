@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
 
 // 1. Import her pre-built logout button component 👇
-import { LogoutButton } from '@/components/ui/LogoutButton';
+import { LogoutButton } from '@/components/ui/LogoutButton.jsx';
 
 // 2. Kept clean without duplicate icon strings
 import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';

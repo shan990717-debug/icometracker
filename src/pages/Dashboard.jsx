@@ -37,13 +37,19 @@ export default function Dashboard() {
   const { lang } = useLanguage();
   const [selectedTarget, setSelectedTarget] = useState('minimum_safe');
 
+  // ── REWRITTEN SECURE QUERIES ──
   const { data: records = [], isLoading } = useQuery({
     queryKey: ['dailyRecords'],
     queryFn: () => base44.entities.DailyRecord.list('-date', 60),
+    // 🛡️ LOCK GATING: Explicitly forbids running during transient login frames
+    enabled: !!base44.auth?.user, 
   });
+
   const { data: claims = [] } = useQuery({
     queryKey: ['claims'],
     queryFn: () => base44.entities.Claim.list('-date_paid', 50),
+    // 🛡️ LOCK GATING: Prevents the second stream from cross-firing
+    enabled: !!base44.auth?.user,
   });
 
 

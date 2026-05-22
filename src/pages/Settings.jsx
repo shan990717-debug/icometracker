@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
+import { useAuth } from '@/lib/AuthContext';
 
 import { LogoutButton } from '@/components/ui/LogoutButton';
 import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
@@ -19,6 +20,7 @@ const COLORS = [
 export default function Settings() {
   const { lang, toggleLang } = useLanguage();
   const queryClient = useQueryClient();
+  const { user } = useAuth(); // 🛠️ B. Grab the true logged-in user profile context here
   
   const [activeTab, setActiveTab] = useState('income');
   const [editItem, setEditItem] = useState(null);
@@ -46,14 +48,23 @@ export default function Settings() {
   };
 
   const { data: incomeSources = [] } = useQuery({
-    queryKey: ['incomeSources'],
-    queryFn: async () => { await seedDefaultCategories(); return base44.entities.IncomeSource.list('sort_order', 50); },
-  });
-  const { data: deductionCategories = [] } = useQuery({
-    queryKey: ['deductionCategories'],
-    queryFn: async () => { await seedDefaultCategories(); return base44.entities.DeductionCategory.list('sort_order', 50); },
+    queryKey: ['incomeSources', user?.uid],
+    queryFn: async () => { 
+      await seedDefaultCategories(user); // 🛡️ Safely passes your user down
+      return base44.entities.IncomeSource.list('sort_order', 50); 
+    },
+    enabled: !!user, // Prevents executing before auth state settles
   });
 
+  const { data: deductionCategories = [] } = useQuery({
+    queryKey: ['deductionCategories', user?.uid],
+    queryFn: async () => { 
+      await seedDefaultCategories(user); // 🛡️ Safely passes your user down
+      return base44.entities.DeductionCategory.list('sort_order', 50); 
+    },
+    enabled: !!user,
+  });
+  
   const TABS = [
     { key: 'income', label: lang === 'zh' ? '收入来源' : 'Income Sources' },
     { key: 'deductions', label: lang === 'zh' ? '扣除类别' : 'Deductions' },

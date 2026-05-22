@@ -25,8 +25,9 @@ import PaymentEditForm from '@/pages/PaymentEditForm';
 import FamilyClaimForm from '@/pages/FamilyClaimForm';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
+  // 1. Wait until authentication finishes checking with Firebase
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -35,9 +36,15 @@ const AuthenticatedApp = () => {
     );
   }
 
+  // 2. New Catch-All: If authentication completed but there is no user object, send them to log in!
+  if (!user) {
+    navigateToLogin();
+    return null;
+  }
+
+  // 3. Handle specific custom error statuses
   if (authError) {
     if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
-    if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
   return (

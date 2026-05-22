@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTria
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
+import { LogoutButton } from "@/components/LogoutButton";
 
 const COLORS = [
   'bg-green-50 text-green-600', 'bg-pink-50 text-pink-600', 'bg-purple-50 text-purple-600',
@@ -381,5 +382,20 @@ export default function Settings() {
         </div>
       )}
     </div>
+    export default function SettingsPage() {
+  return (
+    <div className="max-w-md mx-auto p-4 space-y-4">
+      <h1 className="text-2xl font-bold">Settings</h1>
+      
+      {/* Existing settings options go here (e.g., Theme toggles, Profile) */}
+      <div className="bg-card border rounded-lg p-4">
+        <p className="text-sm text-muted-foreground">Account Actions</p>
+        
+        {/* Drop the Logout Button component right here */}
+        <LogoutButton />
+      </div>
+    </div>
+  );
+}
   );
 }

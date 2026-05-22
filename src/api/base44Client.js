@@ -23,14 +23,10 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
-const auth = getAuth(app);
+export const auth = getAuth(app);
 
-const isUserLoggedOut = () => !auth.currentUser;
-
-// Reusable model engine that routes ALL database actions directly to Firebase Firestore
 const createFirebaseModel = (collectionName) => ({
   filter: async (conditions = {}) => {
-    if (isUserLoggedOut()) return [];
     try {
       let q = collection(db, collectionName);
       Object.keys(conditions).forEach((key) => {
@@ -47,7 +43,6 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   list: async () => {
-    if (isUserLoggedOut()) return [];
     try {
       const snapshot = await getDocs(collection(db, collectionName));
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -58,7 +53,7 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   get: async (id) => {
-    if (!id || isUserLoggedOut()) return null;
+    if (!id) return null;
     try {
       const snapshot = await getDocs(collection(db, collectionName));
       const found = snapshot.docs.find(d => d.id === id);
@@ -79,7 +74,6 @@ const createFirebaseModel = (collectionName) => ({
   },
 
   bulkCreate: async (dataArray) => {
-    if (isUserLoggedOut()) return dataArray;
     try {
       const results = [];
       for (const item of dataArray) {
@@ -115,8 +109,6 @@ const createFirebaseModel = (collectionName) => ({
   }
 });
 
-// A Proxy wrapper that intercepts ANY table name requested by the code 
-// and immediately wires it up to a working live Firestore instance!
 export const entities = new Proxy({}, {
   get: (target, prop) => {
     if (!target[prop]) {

@@ -42,12 +42,26 @@ const DEFAULT_DEDUCTION_CATEGORIES = [
 
 let seedPromise = null;
 
-// 🛠️ Change the signature to accept the active user object passed from the app
 export async function seedDefaultCategories(activeUser) {
+  // 1. 🛡️ CRITICAL GUARD: If the auth context hasn't fully loaded the user yet, STOP immediately.
+  if (!activeUser || !activeUser.email) {
+    console.log('⏳ AuthContext initializing... blocking seed runner.');
+    return;
+  }
+
   if (seedPromise) return seedPromise;
 
   seedPromise = (async () => {
     try {
+      // 2. 🛡️ STRICT EMAIL ENFORCEMENT: If it's NOT ally, do not seed anything at all!
+      const isTargetAccount = activeUser.email.toLowerCase() === 'ally9329@gmail.com';
+      
+      if (!isTargetAccount) {
+        console.log('👤 Alternative account detected. Database seeding permanently disabled for this user.');
+        return; // Bails out safely. Non-ally accounts will get a completely fresh, blank app.
+      }
+
+      // 3. Only if it IS ally9329@gmail.com, check if data already exists
       const [existingIncome, existingDeductions, existingBills] = await Promise.all([
         base44.entities.IncomeSource.list(),
         base44.entities.DeductionCategory.list(),
@@ -55,23 +69,17 @@ export async function seedDefaultCategories(activeUser) {
       ]);
 
       if (existingIncome.length > 0 || existingDeductions.length > 0 || existingBills.length > 0) {
+        console.log('Database already contains categories. Skipping seed.');
         return;
       }
 
-      // 🛡️ HARDCODED GUARD: Check the passed email parameter directly!
-      const isTargetAccount = activeUser?.email?.toLowerCase() === 'ally9329@gmail.com';
-
+      // 4. Seed the clean data templates ONLY for ally9329@gmail.com
+      console.log('✅ Match confirmed for ally9329@gmail.com. Executing template injection.');
       await Promise.all([
         base44.entities.IncomeSource.bulkCreate(DEFAULT_INCOME_SOURCES),
         base44.entities.DeductionCategory.bulkCreate(DEFAULT_DEDUCTION_CATEGORIES),
+        base44.entities.HouseholdBill.bulkCreate(DEFAULT_HOUSEHOLD_BILLS),
       ]);
-
-      if (isTargetAccount) {
-        await base44.entities.HouseholdBill.bulkCreate(DEFAULT_HOUSEHOLD_BILLS);
-        console.log('✅ Match found for ally9329@gmail.com. Seeding personal household bills.');
-      } else {
-        console.log('👤 Generic user profile. Skipping personal bills template injection.');
-      }
 
     } catch (e) {
       console.warn('Seed failed:', e);

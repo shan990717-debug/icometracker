@@ -20,8 +20,8 @@ const COLORS = [
 export default function Settings() {
   const { lang, toggleLang } = useLanguage();
   const queryClient = useQueryClient();
-  const { user } = useAuth(); // 🛠️ B. Grab the true logged-in user profile context here
-  
+  const { user } = useAuth(); // Custom auth context layer
+
   const [activeTab, setActiveTab] = useState('income');
   const [editItem, setEditItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -31,39 +31,32 @@ export default function Settings() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleResetTestData = async () => {
-    if (!confirm(lang === 'zh' ? '确定清除所有测试数据？此操作不可撤销。\n\n将清除：日常记录、账单付款、报销记录、See May记录、储蓄目标、月度结算。\n\n保留：账单模板、类别设置、默认金额。' : 'Clear all test data? This cannot be undone.\n\nWill delete: daily records, bill payments, claims, See May records, goals, settlements.\n\nKeeps: bill templates, categories, default amounts.')) return;
-    setResetting(true);
-    await Promise.all([
-      base44.entities.DailyRecord.list().then(r => Promise.all(r.map(i => base44.entities.DailyRecord.delete(i.id)))),
-      base44.entities.MonthlySettlement.list().then(r => Promise.all(r.map(i => base44.entities.MonthlySettlement.delete(i.id)))),
-      base44.entities.BillPayment.list().then(r => Promise.all(r.map(i => base44.entities.BillPayment.delete(i.id)))),
-      base44.entities.Claim.list().then(r => Promise.all(r.map(i => base44.entities.Claim.delete(i.id)))),
-      base44.entities.SharedFamilyFund.list().then(r => Promise.all(r.map(i => base44.entities.SharedFamilyFund.delete(i.id)))),
-      base44.entities.Goal.list().then(r => Promise.all(r.map(i => base44.entities.Goal.delete(i.id)))),
-    ]);
-    queryClient.invalidateQueries();
-    setResetting(false);
-    toast.success(lang === 'zh' ? '✅ 测试数据已清除' : '✅ Test data cleared');
-  };
+  // 1. 🛡️ CONTROLLED ONE-TIME SEED TRIGGER
+  // This executes exactly once when a user loads the page, rather than on every state change!
+  React.useEffect(() => {
+    if (user && user.email) {
+      seedDefaultCategories(user).then(() => {
+        // Smoothly refresh the UI lists once the initial verification is complete
+        queryClient.invalidateQueries({ queryKey: ['incomeSources'] });
+        queryClient.invalidateQueries({ queryKey: ['deductionCategories'] });
+      });
+    }
+  }, [user, queryClient]);
 
+  // 2. 🟢 CLEAN DATA READS (Completely detached from the seeding logic)
   const { data: incomeSources = [] } = useQuery({
     queryKey: ['incomeSources', user?.uid],
-    queryFn: async () => { 
-      await seedDefaultCategories(user); // 🛡️ Safely passes your user down
-      return base44.entities.IncomeSource.list('sort_order', 50); 
-    },
-    enabled: !!user, // Prevents executing before auth state settles
+    queryFn: () => base44.entities.IncomeSource.list('sort_order', 50),
+    enabled: !!user, // Safely freezes when logging out
   });
 
   const { data: deductionCategories = [] } = useQuery({
     queryKey: ['deductionCategories', user?.uid],
-    queryFn: async () => { 
-      await seedDefaultCategories(user); // 🛡️ Safely passes your user down
-      return base44.entities.DeductionCategory.list('sort_order', 50); 
-    },
-    enabled: !!user,
+    queryFn: () => base44.entities.DeductionCategory.list('sort_order', 50),
+    enabled: !!user, // Safely freezes when logging out
   });
+
+  // ... rest of her existing handesave, delete, and UI layout code continues exactly as normal ...
   
   const TABS = [
     { key: 'income', label: lang === 'zh' ? '收入来源' : 'Income Sources' },

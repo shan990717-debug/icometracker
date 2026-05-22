@@ -34,11 +34,11 @@ function getGreeting(lang) {
   return 'Good evening!';
 }
 
-// 2. Inside the Dashboard component, grab the user context state:
 export default function Dashboard() {
   const { lang } = useLanguage();
-  const { user } = useAuth(); // 🛠️ Get the actual authenticated user object
+  const { user } = useAuth(); 
   const [selectedTarget, setSelectedTarget] = useState('minimum_safe');
+
   // 1. Fetch raw data
   const { data: rawRecords = [], isLoading } = useQuery({
     queryKey: ['dailyRecords', user?.uid], 
@@ -55,19 +55,6 @@ export default function Dashboard() {
   // 2. 🛡️ FILTER DUPLICATES: Force unique entries based on ID
   const records = Array.from(new Map(rawRecords.map(item => [item.id, item])).values());
   const claims = Array.from(new Map(rawClaims.map(item => [item.id, item])).values());
-  
-  // 3. Update the queries to stay locked until the user object is solid!
-  const { data: records = [], isLoading } = useQuery({
-    queryKey: ['dailyRecords', user?.uid], // Unique key per user session
-    queryFn: () => base44.entities.DailyRecord.list('-date', 60),
-    enabled: !!user, // 🛡️ ONLY fetch when your custom AuthContext is fully ready!
-  });
-
-  const { data: claims = [] } = useQuery({
-    queryKey: ['claims', user?.uid],
-    queryFn: () => base44.entities.Claim.list('-date_paid', 50),
-    enabled: !!user, // 🛡️ Freeze query during initialization
-  });
 
   const todayRecord = records.find(r => r.date === TODAY);
   const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
@@ -77,7 +64,6 @@ export default function Dashboard() {
 
   const pendingClaims = claims.filter(c => c.claim_status === 'to_be_claimed');
   const pendingTotal = pendingClaims.reduce((s, c) => s + (c.amount || 0), 0);
-
 
   const targetOption = TARGET_OPTIONS.find(t => t.key === selectedTarget);
   const currentTarget = targetOption.amount;
@@ -92,8 +78,7 @@ export default function Dashboard() {
   const avgDaily = monthRecords.length > 0 ? totals.actualIncome / monthRecords.length : 0;
 
   // 🛡️ Only lock the screen if the user is authenticated AND the network is actively fetching
-  // 2. Standard normal loading interceptor
-  if (isLoading) return (
+  if (isLoading && !!user) return (
     <div className="flex items-center justify-center h-screen">
       <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
     </div>

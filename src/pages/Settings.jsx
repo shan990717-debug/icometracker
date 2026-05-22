@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useLanguage } from '@/lib/i18n';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-// Combined lucide-react imports onto one single line:
-import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
-import { useNavigate } from 'react-router-dom';
 
+// 1. Import her pre-built logout button component 👇
+import { LogoutButton } from '@/components/ui/LogoutButton';
+
+// 2. Kept clean without duplicate icon strings
+import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 const COLORS = [
   'bg-green-50 text-green-600', 'bg-pink-50 text-pink-600', 'bg-purple-50 text-purple-600',
   'bg-orange-50 text-orange-500', 'bg-amber-50 text-amber-600', 'bg-red-50 text-red-500',
@@ -224,26 +226,9 @@ export default function Settings() {
             {lang === 'zh' ? '安全退出当前账户。' : 'Safely sign out of your account.'}
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={async () => {
-            try {
-              // 1. Terminate the session cleanly
-              await base44.auth.logout();
-              
-              // 2. Force the browser to reload specifically at the login route path
-              window.location.href = '/login';
-            } catch (error) {
-              console.error("Logout routing error:", error);
-              // Fallback if anything goes wrong
-              window.location.href = '/login';
-            }
-          }}
-          className="w-full h-10 rounded-xl font-semibold flex items-center justify-center gap-2 border-border hover:bg-secondary"
-        >
-          <LogOut className="w-4 h-4" />
-          {lang === 'zh' ? '退出当前账户' : 'Log Out of Account'}
-        </Button>
+        
+        {/* Render her official pre-built component here directly 👇 */}
+        <LogoutButton />
       </div>
 
       {/* Reset Test Data */}

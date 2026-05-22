@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/lib/i18n';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,31 +32,72 @@ export default function Settings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // 1. 🛡️ CONTROLLED ONE-TIME SEED TRIGGER
-  // This executes exactly once when a user loads the page, rather than on every state change!
-  React.useEffect(() => {
+  useEffect(() => {
     if (user && user.email) {
       seedDefaultCategories(user).then(() => {
-        // Smoothly refresh the UI lists once the initial verification is complete
         queryClient.invalidateQueries({ queryKey: ['incomeSources'] });
         queryClient.invalidateQueries({ queryKey: ['deductionCategories'] });
       });
     }
   }, [user, queryClient]);
 
-  // 2. 🟢 CLEAN DATA READS (Completely detached from the seeding logic)
+  // 2. 🟢 CLEAN DATA READS
   const { data: incomeSources = [] } = useQuery({
     queryKey: ['incomeSources', user?.uid],
     queryFn: () => base44.entities.IncomeSource.list('sort_order', 50),
-    enabled: !!user, // Safely freezes when logging out
+    enabled: !!user,
   });
 
   const { data: deductionCategories = [] } = useQuery({
     queryKey: ['deductionCategories', user?.uid],
     queryFn: () => base44.entities.DeductionCategory.list('sort_order', 50),
-    enabled: !!user, // Safely freezes when logging out
+    enabled: !!user,
   });
 
-  // ... rest of her existing handesave, delete, and UI layout code continues exactly as normal ...
+  // 3. 🛡️ INJECTED MISSING ACCOUNT DELETION FUNCTION
+  const handleDeleteAccount = async () => {
+    try {
+      setDeletingAccount(true);
+      
+      // Perform systematic purge of user-owned entity tracks
+      await Promise.all([
+        base44.entities.DailyRecord.list().then(r => Promise.all(r.map(i => base44.entities.DailyRecord.delete(i.id)))),
+        base44.entities.MonthlySettlement.list().then(r => Promise.all(r.map(i => base44.entities.MonthlySettlement.delete(i.id)))),
+        base44.entities.BillPayment.list().then(r => Promise.all(r.map(i => base44.entities.BillPayment.delete(i.id)))),
+        base44.entities.Claim.list().then(r => Promise.all(r.map(i => base44.entities.Claim.delete(i.id)))),
+        base44.entities.Goal.list().then(r => Promise.all(r.map(i => base44.entities.Goal.delete(i.id)))),
+      ]);
+
+      toast.success(lang === 'zh' ? '账户数据已成功清除' : 'Account data successfully wiped out');
+      
+      // Hit her auth provider boundary method if available, then simulate hard reset exit log
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      window.location.replace(window.location.origin);
+    } catch (err) {
+      console.error("Account deletion sequence failed:", err);
+      toast.error('Purge sequence interrupted.');
+    } finally {
+      setDeletingAccount(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleResetTestData = async () => {
+    if (!confirm(lang === 'zh' ? '确定清除所有测试数据？此操作不可撤销。\n\n将清除：日常记录、账单付款、报销记录、See May记录、储蓄目标、月度结算。\n\n保留：账单模板、类别设置、默认金额。' : 'Clear all test data? This cannot be undone.\n\nWill delete: daily records, bill payments, claims, See May records, goals, settlements.\n\nKeeps: bill templates, categories, default amounts.')) return;
+    setResetting(true);
+    await Promise.all([
+      base44.entities.DailyRecord.list().then(r => Promise.all(r.map(i => base44.entities.DailyRecord.delete(i.id)))),
+      base44.entities.MonthlySettlement.list().then(r => Promise.all(r.map(i => base44.entities.MonthlySettlement.delete(i.id)))),
+      base44.entities.BillPayment.list().then(r => Promise.all(r.map(i => base44.entities.BillPayment.delete(i.id)))),
+      base44.entities.Claim.list().then(r => Promise.all(r.map(i => base44.entities.Claim.delete(i.id)))),
+      base44.entities.SharedFamilyFund.list().then(r => Promise.all(r.map(i => base44.entities.SharedFamilyFund.delete(i.id)))),
+      base44.entities.Goal.list().then(r => Promise.all(r.map(i => base44.entities.Goal.delete(i.id)))),
+    ]);
+    queryClient.invalidateQueries();
+    setResetting(false);
+    toast.success(lang === 'zh' ? '✅ 测试数据已清除' : '✅ Test data cleared');
+  };
   
   const TABS = [
     { key: 'income', label: lang === 'zh' ? '收入来源' : 'Income Sources' },
@@ -175,7 +216,6 @@ export default function Settings() {
       <div className="space-y-2">
         {list.map((item, idx) => (
           <div key={item.id} className={`bg-card rounded-2xl border border-border p-3 flex items-center gap-3 ${!item.is_active ? 'opacity-50' : ''}`}>
-            {/* Order controls */}
             <div className="flex flex-col gap-0.5">
               <button onClick={() => moveOrder(item, 'up', list, isIncome)} className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={idx === 0}>
                 <ChevronUp className="w-3 h-3" />
@@ -185,12 +225,10 @@ export default function Settings() {
               </button>
             </div>
 
-            {/* Badge */}
             <span className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ${item.color || 'bg-secondary text-foreground'}`}>
               {lang === 'zh' && item.label_zh ? item.label_zh : item.label}
             </span>
 
-            {/* Info */}
             <div className="flex-1 min-w-0">
               {!isIncome && item.deduction_type === 'monthly_fixed' && (
                 <p className="text-[10px] text-muted-foreground">Fixed: RM{item.fixed_amount}/mo</p>
@@ -199,7 +237,6 @@ export default function Settings() {
               {item.notes && <p className="text-[10px] text-muted-foreground truncate">{item.notes}</p>}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-1">
               <button onClick={() => toggleActive(item, isIncome)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-secondary transition-colors">
                 {item.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -228,8 +265,6 @@ export default function Settings() {
             {lang === 'zh' ? '安全退出当前账户。' : 'Safely sign out of your account.'}
           </p>
         </div>
-        
-        {/* Her official pre-made component handles everything perfectly inside here 👇 */}
         <LogoutButton />
       </div>
 

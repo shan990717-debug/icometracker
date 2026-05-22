@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { useLanguage } from '@/lib/i18n';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+// Combined lucide-react imports onto one single line:
+import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { seedDefaultCategories } from '@/lib/seedCategories';
-// Add LogOut here 👇
-import { Plus, Pencil, Trash2, Eye, EyeOff, X, ChevronDown, ChevronUp, AlertTriangle, LogOut } from 'lucide-react';
 
 const COLORS = [
   'bg-green-50 text-green-600', 'bg-pink-50 text-pink-600', 'bg-purple-50 text-purple-600',

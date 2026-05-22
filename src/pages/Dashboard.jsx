@@ -75,12 +75,13 @@ export default function Dashboard() {
 
   const avgDaily = monthRecords.length > 0 ? totals.actualIncome / monthRecords.length : 0;
 
-  if (isLoading) return (
+  // 🛡️ Only lock the screen if the user is authenticated AND the network is actively fetching
+  if (isLoading && !!base44.auth?.user) return (
     <div className="flex items-center justify-center h-screen">
       <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
     </div>
   );
-
+  
   return (
     <div className="px-4 pt-12 pb-24 space-y-4 max-w-lg mx-auto">
 

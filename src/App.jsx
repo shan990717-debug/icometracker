@@ -25,28 +25,28 @@ import PaymentEditForm from '@/pages/PaymentEditForm';
 import FamilyClaimForm from '@/pages/FamilyClaimForm';
 
 const AuthenticatedApp = () => {
-  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { user, isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
 
-  // 1. Wait until authentication finishes checking with Firebase
+  // 1. Loading State Screen
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  // 2. New Catch-All: If authentication completed but there is no user object, send them to log in!
+  // 2. Handle specific custom error statuses
+  if (authError && authError.type === 'user_not_registered') {
+    return <UserNotRegisteredError />;
+  }
+
+  // 3. SECURE GATE: If no user is logged in, show the Login component directly!
   if (!user) {
-    navigateToLogin();
-    return null;
+    return <Login />;
   }
 
-  // 3. Handle specific custom error statuses
-  if (authError) {
-    if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
-  }
-
+  // 4. Main App Layout Routes (Only visible when user exists)
   return (
     <Routes>
       <Route element={<AppLayout />}>
@@ -101,5 +101,4 @@ function App() {
   );
 }
 
-// Ensure this default export is present at the very end
 export default App;

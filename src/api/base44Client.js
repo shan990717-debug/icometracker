@@ -24,7 +24,6 @@ const createMockModel = () => ({
   create: async (data) => data,
   update: async (id, data) => data,
   delete: async () => true,
-  // Base44 often uses a .query() chain, so we mock that too
   query: () => ({
     where: () => createMockModel(),
     order: () => createMockModel(),
@@ -32,18 +31,24 @@ const createMockModel = () => ({
   })
 });
 
-// Create a safe mock object containing the models the app is looking for
+// 1. Explicit Named Exports for the models
+export const IncomeSource = createMockModel();
+export const DailyRecord = createMockModel();
+
+// 2. Explicit Named Export for the 'base44' object containing the models
 export const base44 = {
   db: db,
-  IncomeSource: createMockModel(),
-  DailyRecord: createMockModel(),
-  // Adding a generic fallback just in case there are other tables like 'User' or 'Settings'
+  IncomeSource: IncomeSource,
+  DailyRecord: DailyRecord,
   query: async () => ({ data: [], error: null }),
 };
 
-// Default export to keep both styles of imports happy
+// 3. Root Default Export combining everything
 const base44Client = {
   db: db,
+  base44: base44,
+  IncomeSource: IncomeSource,
+  DailyRecord: DailyRecord,
   ...base44
 };
 

@@ -43,36 +43,43 @@ const DEFAULT_DEDUCTION_CATEGORIES = [
 let seedPromise = null;
 
 export async function seedDefaultCategories() {
-  // 1. 🛡️ If a seeding process is already running or completed, reuse it instantly!
   if (seedPromise) return seedPromise;
 
-  // 2. Lock the process synchronously so subsequent rapid renders cannot pass
   seedPromise = (async () => {
     try {
-      // Fetch current lists from the cloud database
       const [existingIncome, existingDeductions, existingBills] = await Promise.all([
         base44.entities.IncomeSource.list(),
         base44.entities.DeductionCategory.list(),
         base44.entities.HouseholdBill.list(),
       ]);
 
-      // 3. 🛡️ Double Guard: If database rows already exist, exit silently and do not create duplicates
       if (existingIncome.length > 0 || existingDeductions.length > 0 || existingBills.length > 0) {
         console.log('Database already contains categories. Skipping seed.');
         return;
       }
 
-      // 4. Safe fresh batch creation (only runs if database is 100% empty)
+      // 1. Get the current logged-in user context object
+      const currentUser = base44.auth?.user;
+      
+      // 2. 🛡️ HARDCODED GUARD: Force an exact match on your email address
+      const isTargetAccount = currentUser?.email?.toLowerCase() === 'ally9329@gmail.com';
+
+      // 3. Create core income and deduction tables for EVERYONE
       await Promise.all([
         base44.entities.IncomeSource.bulkCreate(DEFAULT_INCOME_SOURCES),
         base44.entities.DeductionCategory.bulkCreate(DEFAULT_DEDUCTION_CATEGORIES),
-        base44.entities.HouseholdBill.bulkCreate(DEFAULT_HOUSEHOLD_BILLS)
       ]);
 
-      console.log('✅ Default categories seeded successfully.');
+      // 4. Only seed household bills if the account belongs to ally9329@gmail.com
+      if (isTargetAccount) {
+        await base44.entities.HouseholdBill.bulkCreate(DEFAULT_HOUSEHOLD_BILLS);
+        console.log('✅ Match found for ally9329@gmail.com. Seeding default household bills.');
+      } else {
+        console.log('👤 Alternative user detected. Skipping household bill template injection.');
+      }
+
     } catch (e) {
       console.warn('Seed failed:', e);
-      // Reset lock on failure so it can retry later if needed
       seedPromise = null;
     }
   })();

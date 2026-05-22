@@ -3,14 +3,27 @@ import { useAuth } from '@/lib/AuthContext';
 import { useLanguage } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Globe } from 'lucide-react';
 
 export default function Login() {
   const { login, signup } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage(); // Pulls in the global language controllers
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Toggle switcher between English and Chinese
+  const toggleLanguage = () => {
+    const nextLang = lang === 'zh' ? 'en' : 'zh';
+    if (typeof setLang === 'function') {
+      setLang(nextLang);
+    } else {
+      // Direct local storage backup if the context provider is read-only
+      localStorage.setItem('language', nextLang);
+      window.location.reload();
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,15 +40,13 @@ export default function Login() {
     setLoading(true);
     try {
       if (isRegistering) {
-        // 1. Create the user in Firebase Auth
         await signup(email, password);
         toast.success(lang === 'zh' ? '注册成功！已自动登录' : 'Account created! Logged in successfully');
       } else {
-        // 2. Log in existing user
         await login(email, password);
         toast.success(lang === 'zh' ? '登录成功' : 'Logged in successfully');
       }
-      window.location.href = '/'; // Go to dashboard
+      window.location.href = '/'; 
     } catch (error) {
       console.error(error);
       if (error.code === 'auth/email-already-in-use') {
@@ -50,8 +61,21 @@ export default function Login() {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-6 shadow-xl">
-        <div className="space-y-2 text-center">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-6 shadow-xl relative overflow-hidden">
+        
+        {/* Language Switcher Button on top right */}
+        <div className="absolute top-4 right-4">
+          <button 
+            type="button"
+            onClick={toggleLanguage}
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary bg-secondary/80 px-2.5 py-1.5 rounded-xl border border-border/40 transition-colors"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            {lang === 'zh' ? 'English' : '中文'}
+          </button>
+        </div>
+
+        <div className="space-y-2 text-center pt-4">
           <h1 className="text-2xl font-extrabold tracking-tight">
             {lang === 'zh' ? '收支追踪器' : 'Income Tracker'}
           </h1>
@@ -61,6 +85,7 @@ export default function Login() {
               : (lang === 'zh' ? '请输入凭证以访问系统' : 'Enter your credentials to access the tracker')}
           </p>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-muted-foreground">

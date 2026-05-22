@@ -39,7 +39,23 @@ export default function Dashboard() {
   const { lang } = useLanguage();
   const { user } = useAuth(); // 🛠️ Get the actual authenticated user object
   const [selectedTarget, setSelectedTarget] = useState('minimum_safe');
+  // 1. Fetch raw data
+  const { data: rawRecords = [], isLoading } = useQuery({
+    queryKey: ['dailyRecords', user?.uid], 
+    queryFn: () => base44.entities.DailyRecord.list('-date', 60),
+    enabled: !!user, 
+  });
 
+  const { data: rawClaims = [] } = useQuery({
+    queryKey: ['claims', user?.uid],
+    queryFn: () => base44.entities.Claim.list('-date_paid', 50),
+    enabled: !!user, 
+  });
+
+  // 2. 🛡️ FILTER DUPLICATES: Force unique entries based on ID
+  const records = Array.from(new Map(rawRecords.map(item => [item.id, item])).values());
+  const claims = Array.from(new Map(rawClaims.map(item => [item.id, item])).values());
+  
   // 3. Update the queries to stay locked until the user object is solid!
   const { data: records = [], isLoading } = useQuery({
     queryKey: ['dailyRecords', user?.uid], // Unique key per user session

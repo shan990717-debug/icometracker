@@ -41,7 +41,7 @@ export default function Settings() {
     }
   }, [user, queryClient]);
 
-  // 1. Fetch raw data
+  // 2. 🟢 CLEAN DATA READS (Raw Data)
   const { data: rawIncomeSources = [] } = useQuery({
     queryKey: ['incomeSources', user?.uid],
     queryFn: () => base44.entities.IncomeSource.list('sort_order', 50),
@@ -54,29 +54,15 @@ export default function Settings() {
     enabled: !!user,
   });
 
-  // 2. 🛡️ FILTER DUPLICATES: Force unique entries based on ID
+  // 3. 🛡️ FILTER DUPLICATES: Force unique entries based on ID
   const incomeSources = Array.from(new Map(rawIncomeSources.map(item => [item.id, item])).values());
   const deductionCategories = Array.from(new Map(rawDeductionCategories.map(item => [item.id, item])).values());
-  
-  // 2. 🟢 CLEAN DATA READS
-  const { data: incomeSources = [] } = useQuery({
-    queryKey: ['incomeSources', user?.uid],
-    queryFn: () => base44.entities.IncomeSource.list('sort_order', 50),
-    enabled: !!user,
-  });
 
-  const { data: deductionCategories = [] } = useQuery({
-    queryKey: ['deductionCategories', user?.uid],
-    queryFn: () => base44.entities.DeductionCategory.list('sort_order', 50),
-    enabled: !!user,
-  });
-
-  // 3. 🛡️ INJECTED MISSING ACCOUNT DELETION FUNCTION
+  // 4. ACCOUNT DELETION FUNCTION
   const handleDeleteAccount = async () => {
     try {
       setDeletingAccount(true);
       
-      // Perform systematic purge of user-owned entity tracks
       await Promise.all([
         base44.entities.DailyRecord.list().then(r => Promise.all(r.map(i => base44.entities.DailyRecord.delete(i.id)))),
         base44.entities.MonthlySettlement.list().then(r => Promise.all(r.map(i => base44.entities.MonthlySettlement.delete(i.id)))),
@@ -87,7 +73,6 @@ export default function Settings() {
 
       toast.success(lang === 'zh' ? '账户数据已成功清除' : 'Account data successfully wiped out');
       
-      // Hit her auth provider boundary method if available, then simulate hard reset exit log
       window.localStorage.clear();
       window.sessionStorage.clear();
       window.location.replace(window.location.origin);
@@ -329,112 +314,4 @@ export default function Settings() {
                 <p className="text-xs text-muted-foreground">{lang === 'zh' ? '此操作不可撤销' : 'This cannot be undone'}</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {lang === 'zh'
-                ? '您的所有记录、账单、目标和设置将被永久删除。'
-                : 'All your records, bills, goals, and settings will be permanently deleted.'}
-            </p>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="flex-1 h-11 rounded-xl">
-                {lang === 'zh' ? '取消' : 'Cancel'}
-              </Button>
-              <Button onClick={handleDeleteAccount} disabled={deletingAccount}
-                className="flex-1 h-11 rounded-xl font-bold bg-destructive hover:bg-destructive/90 text-white">
-                {deletingAccount ? '...' : (lang === 'zh' ? '确认删除' : 'Delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Info note */}
-      <div className="bg-secondary rounded-2xl p-4 text-xs text-muted-foreground space-y-1">
-        <p className="font-semibold">{lang === 'zh' ? '💡 说明' : '💡 Notes'}</p>
-        <p>{lang === 'zh' ? '• 默认类别不可删除，但可隐藏' : '• Default categories cannot be deleted, but can be hidden'}</p>
-        <p>{lang === 'zh' ? '• 隐藏的类别不会在今日记录中显示' : '• Hidden categories will not appear on the daily record screen'}</p>
-        <p>{lang === 'zh' ? '• 新建的类别会自动显示在今日记录和统计中' : '• New categories automatically appear in daily records and totals'}</p>
-        <p>{lang === 'zh' ? '• 使用上下箭头调整显示顺序' : '• Use arrows to reorder categories'}</p>
-      </div>
-
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowForm(false)}>
-          <div className="bg-background w-full max-w-lg mx-auto rounded-t-3xl p-5 space-y-4 max-h-[80vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold">
-                {editItem ? (lang === 'zh' ? '编辑' : 'Edit') : (lang === 'zh' ? '添加' : 'Add')} {isIncome ? (lang === 'zh' ? '收入来源' : 'Income Source') : (lang === 'zh' ? '扣除类别' : 'Deduction')}
-              </h2>
-              <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">{lang === 'zh' ? '名称 (EN)' : 'Name (EN)'} *</label>
-                <input value={form.label || ''} onChange={e => setForm(p => ({ ...p, label: e.target.value }))}
-                  className="w-full bg-secondary rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">{lang === 'zh' ? '名称 (中文)' : 'Name (中文 optional)'}</label>
-                <input value={form.label_zh || ''} onChange={e => setForm(p => ({ ...p, label_zh: e.target.value }))}
-                  className="w-full bg-secondary rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary" />
-              </div>
-
-              {/* Color picker */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-2 block">{lang === 'zh' ? '标签颜色' : 'Badge Color'}</label>
-                <div className="grid grid-cols-6 gap-2">
-                  {COLORS.map(c => (
-                    <button key={c} onClick={() => setForm(p => ({ ...p, color: c }))}
-                      className={`h-8 rounded-lg text-xs font-bold border-2 transition-all ${c} ${form.color === c ? 'border-foreground scale-105' : 'border-transparent'}`}>
-                      A
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {!isIncome && (
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">{lang === 'zh' ? '扣除类型' : 'Deduction Type'}</label>
-                  <select value={form.deduction_type || 'daily_manual'} onChange={e => setForm(p => ({ ...p, deduction_type: e.target.value }))}
-                    className="w-full bg-secondary rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
-                    <option value="daily_manual">{lang === 'zh' ? '每日手动输入' : 'Daily manual input'}</option>
-                    <option value="monthly_fixed">{lang === 'zh' ? '每月固定扣除' : 'Monthly fixed deduction'}</option>
-                    <option value="custom">{lang === 'zh' ? '自定义/偶发' : 'Custom / occasional'}</option>
-                  </select>
-                </div>
-              )}
-
-              {!isIncome && form.deduction_type === 'monthly_fixed' && (
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">{lang === 'zh' ? '固定月扣金额 (RM)' : 'Fixed Monthly Amount (RM)'}</label>
-                  <input type="number" inputMode="decimal" value={form.fixed_amount || ''}
-                    onChange={e => setForm(p => ({ ...p, fixed_amount: e.target.value }))}
-                    className="w-full bg-secondary rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-primary" />
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">{lang === 'zh' ? '备注' : 'Notes'}</label>
-                <input value={form.notes || ''} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                  className="w-full bg-secondary rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">{lang === 'zh' ? '显示状态' : 'Visible'}</span>
-                <button onClick={() => setForm(p => ({ ...p, is_active: !p.is_active }))}
-                  className={`w-12 h-6 rounded-full transition-colors ${form.is_active ? 'bg-primary' : 'bg-muted'}`}>
-                  <span className={`block w-5 h-5 rounded-full bg-white shadow transition-transform mx-0.5 ${form.is_active ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-
-            <Button onClick={handleSave} className="w-full h-11 rounded-xl font-bold bg-primary">
-              {lang === 'zh' ? '保存' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+            <p className

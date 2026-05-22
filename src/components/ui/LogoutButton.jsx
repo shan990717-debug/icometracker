@@ -4,19 +4,17 @@ import { base44 } from '@/api/base44Client';
 export function LogoutButton() {
   const handleLogout = async () => {
     try {
-      // 1. Terminate the cloud session session cleanly
+      // 1. Terminate the active backend cloud session session cleanly
       await base44.auth.logout();
-      
-      // 2. 🛡️ THE PERFECT FIX: This natives clears ALL local caches, storage, and session records
+    } catch (error) {
+      console.error("Logout backend execution error:", error);
+    } finally {
+      // 2. 🛡️ Absolute Memory Wipe: Clear all local storage records
       window.localStorage.clear();
       window.sessionStorage.clear();
 
-      // 3. Force a hard native browser reload straight to her base URL domain
+      // 3. Force the browser to fully reload straight to the root login entry screen
       window.location.replace(window.location.origin);
-    } catch (error) {
-      console.error("Logout execution error:", error);
-      // Absolute fallback redirection sequence
-      window.location.replace('/');
     }
   };
 

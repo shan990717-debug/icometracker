@@ -16,9 +16,11 @@ import DreamCapacity from '@/components/review/DreamCapacity';
 
 export default function Review() {
   const { lang } = useLanguage();
+  const queryClient = useQueryClient(); // 🛠️ Make sure this line exists!
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const mStr = monthStr(currentMonth);
-
+  const generatingRef = React.useRef(false);
+  
   const { data: allRecords = [] } = useQuery({ queryKey: ['dailyRecords'], queryFn: () => base44.entities.DailyRecord.list('-date', 400) });
   const { data: settlements = [] } = useQuery({ queryKey: ['settlements'], queryFn: () => base44.entities.MonthlySettlement.list('-month', 24) });
   const { data: claims = [] } = useQuery({ queryKey: ['claims'], queryFn: () => base44.entities.Claim.list('-date_paid', 100) });
@@ -50,6 +52,51 @@ export default function Review() {
   const expenseRatio = totals.grossIncome > 0 ? (totals.totalExpense / totals.grossIncome) * 100 : 0;
   const personalPct = settlement?.personal_spending_pct ?? DEFAULT_PERSONAL_SPENDING_PCT;
 
+  // ── SAFE AUTO-GENERATION LOGIC ──
+  const handleAutoGeneration = async () => {
+    try {
+      // 1. Double check that we aren't writing over an existing settlement row
+      if (settlement) return;
+
+      const calculatedPersonal = totals.actualIncome * (personalPct / 100);
+      
+      // 2. Map her budget allocation metrics cleanly based on her finance equations
+      const newSettlement = {
+        month: mStr,
+        personal_spending: calculatedPersonal,
+        personal_spending_pct: personalPct,
+        family_essential: familyEssential || 0,
+        family_claims: pendingTotal || 0,
+        tuition_fund: tuitionFund || 0,
+        travel_fund: travelFund || 0,
+        emergency_fund: emergencyFund || 0,
+        car_repair_fund: carFund || 0,
+        cashflow_buffer: totals.actualIncome - calculatedPersonal - (familyEssential || 0) - (pendingTotal || 0)
+      };
+
+      // 3. Commit a singular unique record row to her cloud database backend
+      await base44.entities.MonthlySettlement.create(newSettlement);
+      
+      // 4. Invalidate her React Query client data cache key to smoothly update the layout view
+      queryClient.invalidateQueries({ queryKey: ['settlements'] });
+      toast.success(lang === 'zh' ? '✅ 月度结算数据已自动生成' : '✅ Monthly settlement auto-generated');
+    } catch (error) {
+      console.error("Failed to auto-generate metrics:", error);
+    } finally {
+      generatingRef.current = false; // Always clear the promise lock gate
+    }
+  };
+  // ── HOOK GUARD WRAPPER TO PREVENT TRIPLICATES ON LOGIN ──
+  React.useEffect(() => {
+    // If it's already running, immediately kill duplicate trigger renders 2 and 3
+    if (generatingRef.current) return;
+
+    if (monthRecords.length > 0 && !settlement && settlements.length > 0) {
+      generatingRef.current = true; // Lock the execution gate instantly
+      handleAutoGeneration();
+    }
+  }, [monthRecords.length, settlement, settlements.length]);
+  
   return (
     <div className="px-4 pt-14 pb-6 space-y-4 max-w-lg mx-auto">
       {/* Header */}

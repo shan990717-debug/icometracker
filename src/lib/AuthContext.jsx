@@ -7,6 +7,7 @@ import {
   signOut, 
   createUserWithEmailAndPassword 
 } from 'firebase/auth';
+import { queryClientInstance } from '@/lib/query-client'; // Import the global react-query client
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,7 +20,6 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
-
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -48,9 +48,23 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
-  const logout = () => signOut(auth);
-  const signup = (email, password) => createUserWithEmailAndPassword(auth, email, password);
+  const login = (email, password) => {
+    // Clear any leftover cache before logging in
+    queryClientInstance.clear();
+    return signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const logout = async () => {
+    // Completely wipe the React Query cache on logout so data doesn't bleed
+    queryClientInstance.clear();
+    await signOut(auth);
+    window.location.href = '/login';
+  };
+
+  const signup = (email, password) => {
+    queryClientInstance.clear();
+    return createUserWithEmailAndPassword(auth, email, password);
+  };
 
   const value = {
     user,

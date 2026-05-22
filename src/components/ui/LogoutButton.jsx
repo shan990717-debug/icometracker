@@ -1,84 +1,32 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getAuth, signOut } from 'firebase/auth';
-import { LogOut, Loader2 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner"; // Using 'sonner' package found in your package.json
+import React from 'react';
+import { useQueryClient } from '@tanstack/react-query'; // 🛠️ Make sure this is imported!
+import { base44 } from '@/api/base44Client';
 
 export function LogoutButton() {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const auth = getAuth(); // Initializes the Firebase auth instance
+  const queryClient = useQueryClient(); // 🛠️ Initialize the query client
 
   const handleLogout = async () => {
-    setIsLoading(true);
     try {
-      // 1. Sign out from Firebase Auth
-      await signOut(auth);
-      
-      toast.success("Logged out successfully");
-      
-      // 2. Clear routing stack and redirect to login page
-      navigate('/login', { replace: true });
+      // 1. 🛡️ ERASES ALL CURRENT DATA FROM THE BROWSER CACHE INSTANTLY
+      queryClient.clear(); 
+
+      // 2. Clear out the active database session tokens
+      await base44.auth.logout();
+
+      // 3. Force the window to hard-reload straight back to the root entry path
+      window.location.replace(window.location.origin);
     } catch (error) {
-      console.error("Error signing out: ", error);
-      toast.error("Failed to log out. Please try again.");
-    } finally {
-      setIsLoading(false);
+      console.error("Logout failed:", error);
+      window.location.replace('/');
     }
   };
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button 
-          variant="destructive" 
-          className="w-full flex items-center justify-between gap-2 mt-6 border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900"
-        >
-          <span>Log Out</span>
-          <LogOut size={16} />
-        </Button>
-      </AlertDialogTrigger>
-      
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
-          <AlertDialogDescription>
-            You will need to re-enter your credentials to access your account again.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={(e) => {
-              e.preventDefault(); // Keeps dialog open during async logout process
-              handleLogout();
-            }}
-            disabled={isLoading}
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Logging out...
-              </>
-            ) : (
-              "Confirm Log Out"
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <button 
+      onClick={handleLogout}
+      className="w-full h-10 rounded-xl font-semibold flex items-center justify-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+    >
+      Sign Out
+    </button>
   );
 }

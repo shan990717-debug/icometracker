@@ -37,21 +37,16 @@ export default function Dashboard() {
   const { lang } = useLanguage();
   const [selectedTarget, setSelectedTarget] = useState('minimum_safe');
 
-  // ── REWRITTEN SECURE QUERIES ──
+  // 1. Core normal queries (No enabled gates)
   const { data: records = [], isLoading } = useQuery({
     queryKey: ['dailyRecords'],
     queryFn: () => base44.entities.DailyRecord.list('-date', 60),
-    // 🛡️ LOCK GATING: Explicitly forbids running during transient login frames
-    enabled: !!base44.auth?.user, 
   });
 
   const { data: claims = [] } = useQuery({
     queryKey: ['claims'],
     queryFn: () => base44.entities.Claim.list('-date_paid', 50),
-    // 🛡️ LOCK GATING: Prevents the second stream from cross-firing
-    enabled: !!base44.auth?.user,
   });
-
 
   const todayRecord = records.find(r => r.date === TODAY);
   const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
@@ -76,7 +71,8 @@ export default function Dashboard() {
   const avgDaily = monthRecords.length > 0 ? totals.actualIncome / monthRecords.length : 0;
 
   // 🛡️ Only lock the screen if the user is authenticated AND the network is actively fetching
-  if (isLoading && !!base44.auth?.user) return (
+  // 2. Standard normal loading interceptor
+  if (isLoading) return (
     <div className="flex items-center justify-center h-screen">
       <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
     </div>

@@ -49,16 +49,35 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (email, password) => {
-    // Clear any leftover cache before logging in
+    // Completely flush out React Query cache memory before validating credentials
     queryClientInstance.clear();
     return signInWithEmailAndPassword(auth, email, password);
   };
 
+  // 🛡️ THE BULLETPROOF FIXED LOGOUT SEQUENCE
   const logout = async () => {
-    // Completely wipe the React Query cache on logout so data doesn't bleed
-    queryClientInstance.clear();
-    await signOut(auth);
-    window.location.href = '/login';
+    try {
+      // 1. Immediately wipe all local React Query memory states
+      queryClientInstance.clear();
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+
+      // 2. Use the official Firebase signOut function instead of base44!
+      await signOut(auth);
+      
+      // 3. Clear context parameters cleanly
+      setUser(null);
+      setAuthError(null);
+    } catch (error) {
+      console.error("Firebase logout processing execution error:", error);
+    } finally {
+      // 4. Forces the state loader to stay quiet so App.jsx never hides the view behind a spinner
+      setIsLoadingAuth(false);
+      setIsLoadingPublicSettings(false);
+
+      // 5. Hard bounce straight out to the root window landing screen
+      window.location.replace(window.location.origin);
+    }
   };
 
   const signup = (email, password) => {

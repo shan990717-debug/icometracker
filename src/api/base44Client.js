@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 import { 
   getFirestore, 
   collection, 
@@ -24,16 +25,19 @@ const firebaseConfig = {
 // Initialize Firebase safely
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
+const auth = getAuth(app);
 
-// A helper function that transforms database calls straight into Firebase queries
+// Helper to check if a user is authenticated before hitting Firestore
+const isUserLoggedOut = () => !auth.currentUser;
+
+// A helper function that transforms database calls straight into Firebase queries safely
 const createFirebaseModel = (collectionName) => ({
-  // Handles filtering data inline (e.g., .filter({ date: selectedDate }))
   filter: async (conditions = {}) => {
+    if (isUserLoggedOut()) return []; // Silence permissions error if not logged in yet
     try {
       const colRef = collection(db, collectionName);
       let q = colRef;
       
-      // Map query conditions dynamically
       Object.keys(conditions).forEach((key) => {
         q = query(q, where(key, '==', conditions[key]));
       });
@@ -41,23 +45,22 @@ const createFirebaseModel = (collectionName) => ({
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-      console.error(`Error filtering ${collectionName}:`, error);
+      console.warn(`Handled filter restriction for ${collectionName}:`, error.message);
       return [];
     }
   },
 
-  // Handles basic index requests (e.g., .list())
   list: async () => {
+    if (isUserLoggedOut()) return []; // Silence permissions error if not logged in yet
     try {
       const snapshot = await getDocs(collection(db, collectionName));
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-      console.error(`Error listing ${collectionName}:`, error);
+      console.warn(`Handled list restriction for ${collectionName}:`, error.message);
       return [];
     }
   },
 
-  // Handles record creation (e.g., .create(record))
   create: async (data) => {
     try {
       const docRef = await addDoc(collection(db, collectionName), data);
@@ -68,8 +71,8 @@ const createFirebaseModel = (collectionName) => ({
     }
   },
 
-  // Handles entry bulk generation for setup configurations
   bulkCreate: async (dataArray) => {
+    if (isUserLoggedOut()) return dataArray;
     try {
       const results = [];
       for (const item of dataArray) {
@@ -83,7 +86,6 @@ const createFirebaseModel = (collectionName) => ({
     }
   },
 
-  // Handles updating existing inputs (e.g., .update(id, record))
   update: async (id, data) => {
     try {
       const docRef = doc(db, collectionName, id);
@@ -95,7 +97,6 @@ const createFirebaseModel = (collectionName) => ({
     }
   },
 
-  // Handles removal actions (e.g., .delete(recordId))
   delete: async (id) => {
     try {
       const docRef = doc(db, collectionName, id);

@@ -37,45 +37,45 @@ const DEFAULT_DEDUCTION_CATEGORIES = [
   { key: 'expense_car',         label: 'Car Expenses', label_zh: '车辆费用', color: 'bg-rose-50 text-rose-600', deduction_type: 'daily_manual', sort_order: 6, is_default: true, is_active: true },
 ];
 
-let seeded = false;
+// Keep the existing arrays at the top exactly as they are.
+// Replace the bottom section starting from 'let seeded = false;' with this:
+
+let seedPromise = null;
 
 export async function seedDefaultCategories() {
-  if (seeded) return;
-  seeded = true;
+  // 1. 🛡️ If a seeding process is already running or completed, reuse it instantly!
+  if (seedPromise) return seedPromise;
 
-  try {
-    const [existingIncome, existingDeductions, existingBills] = await Promise.all([
-      base44.entities.IncomeSource.list(),
-      base44.entities.DeductionCategory.list(),
-      base44.entities.HouseholdBill.list(),
-    ]);
+  // 2. Lock the process synchronously so subsequent rapid renders cannot pass
+  seedPromise = (async () => {
+    try {
+      // Fetch current lists from the cloud database
+      const [existingIncome, existingDeductions, existingBills] = await Promise.all([
+        base44.entities.IncomeSource.list(),
+        base44.entities.DeductionCategory.list(),
+        base44.entities.HouseholdBill.list(),
+      ]);
 
-    const existingIncomeKeys = new Set(existingIncome.map(i => i.key));
-    const toCreateIncome = DEFAULT_INCOME_SOURCES.filter(s => !existingIncomeKeys.has(s.key));
-    if (toCreateIncome.length > 0) await base44.entities.IncomeSource.bulkCreate(toCreateIncome);
-
-    const existingDeductionKeys = new Set(existingDeductions.map(d => d.key));
-    const toCreateDeductions = DEFAULT_DEDUCTION_CATEGORIES.filter(d => !existingDeductionKeys.has(d.key));
-    if (toCreateDeductions.length > 0) await base44.entities.DeductionCategory.bulkCreate(toCreateDeductions);
-
-    // Seed household bills if none exist yet (first-time setup)
-    if (existingBills.length === 0) {
-      await base44.entities.HouseholdBill.bulkCreate(DEFAULT_HOUSEHOLD_BILLS);
-    } else {
-      // Deactivate removed bills (LG Water Purifier)
-      const lgBill = existingBills.find(b => b.name && b.name.includes('LG Water Purifier'));
-      if (lgBill && lgBill.is_active) {
-        await base44.entities.HouseholdBill.update(lgBill.id, { is_active: false });
+      // 3. 🛡️ Double Guard: If database rows already exist, exit silently and do not create duplicates
+      if (existingIncome.length > 0 || existingDeductions.length > 0 || existingBills.length > 0) {
+        console.log('Database already contains categories. Skipping seed.');
+        return;
       }
-      // Ensure fixed amounts are up to date for existing bills
-      for (const def of DEFAULT_HOUSEHOLD_BILLS.filter(b => b.default_amount > 0)) {
-        const existing = existingBills.find(b => b.name === def.name);
-        if (existing && existing.default_amount !== def.default_amount) {
-          await base44.entities.HouseholdBill.update(existing.id, { default_amount: def.default_amount });
-        }
-      }
+
+      // 4. Safe fresh batch creation (only runs if database is 100% empty)
+      await Promise.all([
+        base44.entities.IncomeSource.bulkCreate(DEFAULT_INCOME_SOURCES),
+        base44.entities.DeductionCategory.bulkCreate(DEFAULT_DEDUCTION_CATEGORIES),
+        base44.entities.HouseholdBill.bulkCreate(DEFAULT_HOUSEHOLD_BILLS)
+      ]);
+
+      console.log('✅ Default categories seeded successfully.');
+    } catch (e) {
+      console.warn('Seed failed:', e);
+      // Reset lock on failure so it can retry later if needed
+      seedPromise = null;
     }
-  } catch (e) {
-    console.warn('Seed failed:', e);
-  }
+  })();
+
+  return seedPromise;
 }

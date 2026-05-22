@@ -18,8 +18,13 @@ const TODAY = format(new Date(), 'yyyy-MM-dd');
 export default function Today() {
   const { lang } = useLanguage();
   const queryClient = useQueryClient();
-  const { sources, isLoading: loadingSources } = useIncomeSources();
-  const { categories, isLoading: loadingCats } = useDeductionCategories();
+  // 1. Fetch the raw duplicated lists from your custom hooks
+  const { sources: rawSources = [], isLoading: loadingSources } = useIncomeSources();
+  const { categories: rawCategories = [], isLoading: loadingCats } = useDeductionCategories();
+
+  // 2. 🛡️ SILVER BULLET FILTER: Strip out duplicates by matching their exact names (labels)
+  const sources = Array.from(new Map(rawSources.map(item => [item.label, item])).values());
+  const categories = Array.from(new Map(rawCategories.map(item => [item.label, item])).values());
 
   const urlParams = new URLSearchParams(window.location.search);
   const paramDate = urlParams.get('date');

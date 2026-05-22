@@ -1,5 +1,15 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  where 
+} from 'firebase/firestore';
 
 // Firebase configuration using Vite environment variables
 const firebaseConfig = {
@@ -13,52 +23,109 @@ const firebaseConfig = {
 
 // Initialize Firebase safely
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-
-// Initialize Firestore Database
 export const db = getFirestore(app);
 
-// A clean database model blueprint that acts like BOTH an object and a safe array generator
-const createCleanMockModel = () => {
-  return {
-    // Standard Base44 database execution styles
-    list: async () => [],
-    get: async () => null,
-    create: async (data) => data,
-    bulkCreate: async (data) => data,
-    update: async (id, data) => data,
-    delete: async () => true,
-    
-    // In case the code uses base44.entities.DailyRecord.query().where().exec()
-    query: () => ({
-      where: () => createCleanMockModel(),
-      order: () => createCleanMockModel(),
-      exec: async () => []
-    })
-  };
-};
+// A helper function that transforms database calls straight into Firebase queries
+const createFirebaseModel = (collectionName) => ({
+  // Handles filtering data inline (e.g., .filter({ date: selectedDate }))
+  filter: async (conditions = {}) => {
+    try {
+      const colRef = collection(db, collectionName);
+      let q = colRef;
+      
+      // Map query conditions dynamically
+      Object.keys(conditions).forEach((key) => {
+        q = query(q, where(key, '==', conditions[key]));
+      });
 
-// Auto-generating objects dynamically so any referenced table (DailyRecord, etc.) handles array safety perfectly
-export const entities = new Proxy({}, {
-  get: (target, prop) => {
-    if (!target[prop]) {
-      target[prop] = createCleanMockModel();
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error(`Error filtering ${collectionName}:`, error);
+      return [];
     }
-    return target[prop];
+  },
+
+  // Handles basic index requests (e.g., .list())
+  list: async () => {
+    try {
+      const snapshot = await getDocs(collection(db, collectionName));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error(`Error listing ${collectionName}:`, error);
+      return [];
+    }
+  },
+
+  // Handles record creation (e.g., .create(record))
+  create: async (data) => {
+    try {
+      const docRef = await addDoc(collection(db, collectionName), data);
+      return { id: docRef.id, ...data };
+    } catch (error) {
+      console.error(`Error creating document in ${collectionName}:`, error);
+      throw error;
+    }
+  },
+
+  // Handles entry bulk generation for setup configurations
+  bulkCreate: async (dataArray) => {
+    try {
+      const results = [];
+      for (const item of dataArray) {
+        const docRef = await addDoc(collection(db, collectionName), item);
+        results.push({ id: docRef.id, ...item });
+      }
+      return results;
+    } catch (error) {
+      console.error(`Error bulk creating in ${collectionName}:`, error);
+      return dataArray;
+    }
+  },
+
+  // Handles updating existing inputs (e.g., .update(id, record))
+  update: async (id, data) => {
+    try {
+      const docRef = doc(db, collectionName, id);
+      await updateDoc(docRef, data);
+      return { id, ...data };
+    } catch (error) {
+      console.error(`Error updating document in ${collectionName}:`, error);
+      throw error;
+    }
+  },
+
+  // Handles removal actions (e.g., .delete(recordId))
+  delete: async (id) => {
+    try {
+      const docRef = doc(db, collectionName, id);
+      await deleteDoc(docRef);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting document in ${collectionName}:`, error);
+      throw error;
+    }
   }
 });
 
-// Explicit Named Export for the 'base44' object
-export const base44 = {
-  db: db,
-  entities: entities,
-  query: async () => ({ data: [], error: null }),
+// Explicitly provide structural engines for all tables used by the UI components
+export const entities = {
+  DailyRecord: createFirebaseModel('DailyRecord'),
+  IncomeSource: createFirebaseModel('IncomeSource'),
+  DeductionCategory: createFirebaseModel('DeductionCategory'),
+  HouseholdBill: createFirebaseModel('HouseholdBill'),
 };
 
-// Root Default Export matching all layout targets across the codebase
+export const base44 = {
+  db,
+  entities,
+  query: async () => ({ data: [], error: null })
+};
+
 const base44Client = {
-  db: db,
-  base44: base44,
-  entities: entities,
+  db,
+  base44,
+  entities,
   ...entities
 };
 

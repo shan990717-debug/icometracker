@@ -4,16 +4,16 @@ import { base44 } from '@/api/base44Client';
 export function LogoutButton() {
   const handleLogout = async () => {
     try {
-      // 1. Terminate the active backend cloud session session cleanly
+      // 1. Terminate the cloud database connection session
       await base44.auth.logout();
     } catch (error) {
-      console.error("Logout backend execution error:", error);
+      console.error("Logout authentication processing error:", error);
     } finally {
-      // 2. 🛡️ Absolute Memory Wipe: Clear all local storage records
+      // 2. 🛡️ Clean out lingering frontend layout cache metrics
       window.localStorage.clear();
       window.sessionStorage.clear();
 
-      // 3. Force the browser to fully reload straight to the root login entry screen
+      // 3. Force the application back to a 100% fresh slate at the root entry path
       window.location.replace(window.location.origin);
     }
   };

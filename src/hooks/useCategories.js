@@ -1,14 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/api/base44Client';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { seedDefaultCategories } from '@/lib/seedCategories';
 
 export function useIncomeSources() {
+  // We keep this here so it runs your original setup data
   useEffect(() => { seedDefaultCategories(); }, []);
 
   const { data = [], isLoading, refetch } = useQuery({
     queryKey: ['incomeSources'],
-    queryFn: () => base44.entities.IncomeSource.list('sort_order', 50),
+    queryFn: async () => {
+      try {
+        const q = query(collection(db, 'IncomeSource'), orderBy('sort_order', 'asc'));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (error) {
+        console.error("Error fetching income sources from Firebase:", error);
+        return [];
+      }
+    },
     staleTime: 30000,
   });
 
@@ -25,7 +36,16 @@ export function useDeductionCategories() {
 
   const { data = [], isLoading, refetch } = useQuery({
     queryKey: ['deductionCategories'],
-    queryFn: () => base44.entities.DeductionCategory.list('sort_order', 50),
+    queryFn: async () => {
+      try {
+        const q = query(collection(db, 'DeductionCategory'), orderBy('sort_order', 'asc'));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (error) {
+        console.error("Error fetching deduction categories from Firebase:", error);
+        return [];
+      }
+    },
     staleTime: 30000,
   });
 

@@ -42,6 +42,7 @@ export default function Settings() {
   }, [user, queryClient]);
 
   // 2. 🟢 CLEAN DATA READS (Raw Data)
+  // 1. Fetch Raw Data 
   const { data: rawIncomeSources = [] } = useQuery({
     queryKey: ['incomeSources', user?.uid],
     queryFn: () => base44.entities.IncomeSource.list('sort_order', 50),
@@ -54,10 +55,9 @@ export default function Settings() {
     enabled: !!user,
   });
 
-  // 3. 🛡️ FILTER DUPLICATES: Force unique entries based on ID
-  const incomeSources = Array.from(new Map(rawIncomeSources.map(item => [item.id, item])).values());
-  const deductionCategories = Array.from(new Map(rawDeductionCategories.map(item => [item.id, item])).values());
-
+  // 2. 🛡️ THE SHIELD: Filter categories by their NAME (label), not ID!
+  const incomeSources = Array.from(new Map(rawIncomeSources.map(item => [item.label, item])).values());
+  const deductionCategories = Array.from(new Map(rawDeductionCategories.map(item => [item.label, item])).values());
   // 4. ACCOUNT DELETION FUNCTION
   const handleDeleteAccount = async () => {
     try {

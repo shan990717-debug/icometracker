@@ -52,10 +52,9 @@ export default function Dashboard() {
     enabled: !!user, 
   });
 
-  // 2. 🛡️ FILTER DUPLICATES: Force unique entries based on ID
-  const records = Array.from(new Map(rawRecords.map(item => [item.id, item])).values());
+  // 2. 🛡️ THE SHIELD: Filter records by DATE, not ID!
+  const records = Array.from(new Map(rawRecords.map(item => [item.date, item])).values());
   const claims = Array.from(new Map(rawClaims.map(item => [item.id, item])).values());
-
   const todayRecord = records.find(r => r.date === TODAY);
   const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
   const monthEnd = format(endOfMonth(new Date()), 'yyyy-MM-dd');
